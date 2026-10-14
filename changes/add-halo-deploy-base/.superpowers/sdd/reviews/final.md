@@ -1,0 +1,82 @@
+# 代码审查报告 — wave `implementation`
+
+- 变更：`add-halo-deploy-base`（M0 环境与部署底座）
+- 审查范围：`0d5bb456c37bb58714f6f9332e0d9b344138a46f` → `3fa63b07907394d4c5a26b60c0ee2c6f783a0c4e`
+- 规模：19 个文件，1344 行新增，0 行删除
+- 审查策略：Native `final` —— 由当前执行者在本地审查完整 diff，**未派发 reviewer 子代理**
+- 判定：**pass**（Critical 0 / Important 0 / Minor 5）
+
+## 审查方法
+
+1. 对照获批计划逐条核对 9 个交付物（tasks.md 1.1–2.4）的存在性、范围与验收条件；确认没有超出 proposal.md 的 In Scope。
+2. 逐行通读全部可执行文件（`backup.sh` 154 行、`boot-test.sh` 158 行、`static-check.sh` 273 行）与声明式文件（`docker-compose.yml`、`docker-compose.prod.yml`、`Caddyfile`、`.env.example`、`.gitignore`、`.gitattributes`）。
+3. 对可疑写法做**实证验证**而不是靠推断下结论（见「已排除的怀疑点」）。
+4. 复核真实运行证据，而不是只信 dry-run。
+
+## 规格符合性（specs/deployment-baseline/spec.md 的 5 条 Requirement）
+
+| Requirement | 证据 | 结论 |
+|---|---|---|
+| 一条命令起停本地站点 | `boot-test.sh` 1/5 `compose up -d`；健康接口返回 `{"status":"UP"}` | 符合 |
+| 数据在容器重建后保留 | 重建后探针行 = `firstboot`、附件哨兵仍在、`PG_VERSION=15` | 符合 |
+| 参数经环境变量注入 | `static-check.sh --vars` 7/7：换 `.env` 后镜像/库名/站点地址全部随之改变 | 符合 |
+| 每日备份产出可恢复转储 | 真实执行 exit 0：`halo-db-*.sql.gz` 20152 B、`halo-attachments-*.tar.gz` 16179 B | 部分（见 R-1） |
+| 线上 HTTPS 域名 | `Caddyfile` `caddy validate` → `Valid configuration`；叠加层暴露 80/443 | 符合 |
+
+范围外事项（主题开发、Artalk/搜索/统计、COS 桶与密钥、域名购买与备案、线上真实部署）确认未被实现，无范围蔓延。
+
+## 缺陷清单
+
+### Critical
+无。
+
+### Important
+无。
+
+### Minor（记录，本批次不修）
+
+- **M-1** `deploy/backup/backup.sh:29` — `usage() { sed -n '2,15p' "$0"; }` 会把第 15 行 `set -euo pipefail` 一并当作帮助文本打印出来。纯观感问题；改成 `sed -n '2,14p'` 即可。
+- **M-2** `deploy/verify/static-check.sh:46-49` — 缺少 docker **CLI** 时脚本在参数解析后立即 exit 3，因此 `--eol`（纯文件系统 + git 属性检查）在没有 docker CLI 的机器上也跑不了。头部注释已声明该退出码，属已知取舍；若要放宽，可把 CLI 检查下移到 `check_base`。
+- **M-3** `deploy/verify/boot-test.sh:60,76` — 依赖宿主机 `curl` 但未做 `command -v curl` 前置检查；缺 curl 时会退化成「等待 300s 后不可用」，错误信息指向错误方向。
+- **M-4** `deploy/docker-compose.prod.yml:30` — caddy 的 `healthcheck` 用 `["CMD","caddy","version"]`，只能证明二进制存在，不能证明站点在服务。因为没有服务 `depends_on: caddy`，它不影响启动顺序，属名义健康检查。
+- **M-5** `deploy/docker-compose.yml:16,55` — `POSTGRES_PASSWORD` 内置默认值 `change-me-please`。这是「无 `.env` 时也要能通过静态校验」这一设计目标的直接代价，且 `halo` 端口只绑 `127.0.0.1`、数据库完全未发布端口，风险被收敛在宿主本机；`.env.example:15` 与 README 变量表都已要求首次部署前修改。保留现状，仅记录。
+
+## 已排除的怀疑点（实证）
+
+- **怀疑**：`backup.sh:116,127,142` 的 `[ "$DRY_RUN" -eq 0 ] && ok ...` 位于 `set -e` 的 then 分支末尾，dry-run 时应因返回 1 而中止脚本；且 2.3 的证明命令正是 `--dry-run`，一旦 `deploy/data/halo2` 存在就会命中该行。
+  **验证**：`bash -c 'set -euo pipefail; if true; then false && echo hi; fi; echo SURVIVED_A'` → exit 0（AND-OR 列表非末位命令的失败被 `set -e` 豁免）；并在 `deploy/data/halo2` 已存在的当下真实重跑证明命令 `bash deploy/backup/backup.sh --dry-run` → exit 0。
+  **结论**：不是缺陷。
+- **怀疑**：`read_env()` 在键不存在时（`COS_UPLOAD_CMD` 在 `.env.example` 里被注释掉）`grep` 返回 1，配合 `pipefail` 会让赋值失败并被 `set -e` 中止。
+  **验证**：`bash -c 'set -euo pipefail; f(){ v="$(grep -E "^NOPE=" /dev/null | tail -1 | tr -d "\r")"; printf "[%s]" "${v:-def}"; }; f; echo SURVIVED_B'` → 输出 `[def]SURVIVED_B`，exit 0；真实运行中 step 4 也正确走到「未配置 COS_UPLOAD_CMD」分支。
+  **结论**：不是缺陷。
+- **怀疑**：`static-check.sh` 与 `backup.sh` 里的 `… | head | grep -q` 会在 `pipefail` 下产生 SIGPIPE 假失败（真实的 `backup.sh` 自校验曾因此误报）。
+  **验证**：`backup.sh:103` 已改为 `dump_head="$(gzip -dc "$DB_FILE" | head -5 || true)"` + `case` 匹配，并在文件内留了注释说明原因；`static-check.sh` 的 `grep -q` 全部作用于文件或小段 `printf` 输出，不扇出 SIGPIPE。
+  **结论**：原缺陷已在本次执行中修复并验证（真实备份 exit 0）。
+
+## 真实运行证据（非 dry-run）
+
+- `bash deploy/verify/static-check.sh --all` → 通过 25 项，失败 0 项。
+- `bash deploy/verify/boot-test.sh --keep` → 5/5，exit 0（含 `compose down` 后重建的数据留存验证）。
+- `bash deploy/backup/backup.sh` → exit 0；`--dry-run` → exit 0。
+- `caddy validate`（官方镜像）→ `Valid configuration`。
+
+## 残留风险
+
+- **R-1（验证缺口，非代码缺陷）**：恢复演练（把转储导入一个临时库并核对表数量）未能执行 —— 该命令被工具侧安全守卫以「访问敏感路径 `deploy/.env`」拦截，按规则未绕过。当前对 Requirement 4 的证明是「转储为完整、可解压的 pg_dump 归档且自校验通过」，而**不是**「已实际还原成功」。手工执行方式已写入 `deploy/README.md`「备份与恢复演练」。
+- **R-2（上游依赖）**：`registry.fit2cloud.com/halo/halo:2.27.0` 在本机于层 `9d8d42fbc560` 停滞；同一镜像的 Docker Hub 源 `halohub/halo:2.27.0` 可拉通且层摘要一致。已在 `design.md` 记录，并在 `.env.example`/README 提供 `HALO_IMAGE` 逃生口。这不影响产物正确性，只影响首次拉取路径。
+- **R-3（环境耦合）**：所有脚本经 WSL bash 验证（`$PWD` 为 `/mnt/d/...`）。这是本机唯一可用的 POSIX shell，脚本本身保持 POSIX 写法、未使用 WSL 专有特性。
+
+## 计划偏离申报（范围保持型，不改变交付结果）
+
+执行期间出现两处与 `tasks.md` 原始措辞不一致的实现选择。两处都在执行时被实测发现、已记入 `design.md` 或代码注释，并把 `tasks.md` 的措辞订正为与实现一致：
+
+- **D-1（数据库存储方式）**：1.2 原文要求 `./data/db` 绑定挂载。启动级验证实测 `initdb: error: could not change permissions of directory "/var/lib/postgresql/data": Operation not permitted`（Windows 绑定挂载不支持 chmod），故改为命名卷 `sg-blog-halodb-data`。数据持久化的交付结果不变（容器重建留存验证已通过），但备份途径从「拷目录」变为 `pg_dump`，已写入 README 与 design.md 决策。
+- **D-2（生产叠加层的启用方式）**：2.1 原文要求「以 profile 方式加入 caddy 服务」。实现刻意不使用 profile —— profile 是 opt-in，漏写 `--profile` 时 Caddy 静默不启动、站点在无 HTTPS 下裸奔且不报错；叠加层文件本身就是线上开关，语义更安全。理由写在 `deploy/docker-compose.prod.yml` 文件头注释。
+
+两处都未新增或削减任何交付物，属于消除静默失败的实现细化，因此不改变判定。
+
+## 判定
+
+**pass**。无 merge-blocking 缺陷；5 项 Minor 记录在案、留待后续处理；2 处范围保持型偏离已申报；R-1 作为已知验证缺口随本次交付一并申报。
+
+> 记录说明：本报告首次按执行计划 revision 3 记录（`pass`）。因勾选任务并把上述偏离订正进 `tasks.md`，计划重同步为 revision 4，原回执失效，故按同一 Git 范围与同一份报告重新记录。

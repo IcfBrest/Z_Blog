@@ -1,7 +1,7 @@
 {
   "mode": "inline",
   "source": "approved-plan",
-  "rationale": "启动级验证发现 Windows 绑定挂载导致 PostgreSQL initdb 权限失败，改为数据库命名卷并补记实测事实",
+  "rationale": "实现完成：勾选全部任务并订正 1.2/2.1 的任务措辞以匹配实际实现（数据库命名卷、叠加层常驻）",
   "waves": [
     {
       "id": "implementation",
@@ -20,11 +20,11 @@
       "depends_on": []
     }
   ],
-  "artifacts_hash": "sha256:213b2c3bc295fd110f9d89c475575d83d0921cf33e0ecab23312d8f70b7f6889",
+  "artifacts_hash": "sha256:0e75fd2c6054302803c9fc79f4736ace1438ce6650c6e5b892947cd7f508dfb4",
   "contract_hash": null,
   "workflow": "full",
-  "revision": 3,
+  "revision": 4,
   "schema_version": 2,
   "review_policy": "final",
-  "hash": "sha256:8d3102907d1c7447d39022d6972ff3ef725ed23dca77d29d4e53eee53a051fa3"
+  "hash": "sha256:aa85d1f3e18ca4f2f1c4cb9bc96d754c16731efba023e72125555b1a69f8ead9"
 }
