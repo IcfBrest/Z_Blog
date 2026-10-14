@@ -1,0 +1,36 @@
+# 生产叠加层：在基础定义之上追加 Caddy 反向代理与 80/443。
+#
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml \
+#     --env-file deploy/.env up -d
+#
+# 刻意不使用 compose profiles：叠加层文件本身就是"线上"开关。若再挂 profile，
+# 漏写 --profile 时 Caddy 不会启动，站点会在没有 HTTPS 的情况下裸奔，且不会报错。
+
+services:
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
+    restart: unless-stopped
+    depends_on:
+      halo:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      # HTTP/3 走 UDP，Caddy 在发布 443/udp 时自动启用
+      - "443:443/udp"
+    environment:
+      # Caddyfile 用 {$DOMAIN} 读取，改域名只需改 .env
+      DOMAIN: ${DOMAIN:-blog.example.com}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # 证书与 ACME 账户信息必须落盘，否则每次重建都重新申请，容易触发速率限制
+      - ./data/caddy/data:/data
+      - ./data/caddy/config:/config
+    healthcheck:
+      test: ["CMD", "caddy", "version"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - halo_network

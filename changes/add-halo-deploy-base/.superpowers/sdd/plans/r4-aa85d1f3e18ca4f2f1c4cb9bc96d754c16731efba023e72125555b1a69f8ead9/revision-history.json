@@ -1,0 +1,6 @@
+{
+  "previous_plan_hash": "sha256:8d3102907d1c7447d39022d6972ff3ef725ed23dca77d29d4e53eee53a051fa3",
+  "previous_revision": 3,
+  "reason": "实现完成：勾选全部任务并订正 1.2/2.1 的任务措辞以匹配实际实现（数据库命名卷、叠加层常驻）",
+  "evidence": "scope changed: passing evidence invalidated; failures retained"
+}

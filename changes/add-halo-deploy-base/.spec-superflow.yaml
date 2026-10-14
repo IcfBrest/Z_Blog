@@ -1,0 +1,63 @@
+# .spec-superflow.yaml — lightweight state machine
+# Progress and legacy approvals. Recover missing evidence; never infer approval from artifact existence.
+
+# === Core state ===
+state: closing
+workflow: full
+workflow_variant: planned
+completion_outcome: verified
+completion_reason: null
+revision: null
+
+# === Hashes (fast staleness detection) ===
+artifacts_hash: sha256:0e75fd2c6054302803c9fc79f4736ace1438ce6650c6e5b892947cd7f508dfb4
+contract_hash: null
+
+# === Execution progress ===
+execution_mode: null
+execution_plan_hash: null
+execution_plan_revision: null
+batches_completed: 0
+test_result: pass: bash deploy/verify/static-check.sh --all
+spec_merged: true
+spec_publication_receipt: eyJ2ZXJzaW9uIjoxLCJzb3VyY2VfaGFzaCI6InNoYTI1NjpiODgxYTg3NTc0MTU1NzhlNjQ1ZGQ3MmJhZTFkOTE2MGE2Zjg3ZTBjYzUyYzUxYjNiZDZhYWRiMDY5NDkzYWM3IiwiYmFzZWxpbmVfYmVmb3JlX2hhc2giOiJzaGEyNTY6YjRkYzUwNzQxM2U5NjY0MDVjMGEwNWU5NzM4NjIyNWM2ZWI2M2IxZDJhNTFlYzRjNWRkYzBhZGY0ZGRiZDE3YSIsImJhc2VsaW5lX2FmdGVyX2hhc2giOiJzaGEyNTY6ZjRmYmJlYmVhZmRlYTIzZGFhMmQ4ZTk3NWE0ODIxOTU2ODQ1OWQxYjRkYWYyZDcxY2FhNzk3Y2ZmMzU3MDM3YyIsImNhcGFiaWxpdGllcyI6WyJkZXBsb3ltZW50LWJhc2VsaW5lIl19
+
+# === Metadata ===
+change_name: add-halo-deploy-base
+last_transition: 2026-10-14T14:25:02.167Z
+last_transition_from: null
+last_transition_to: null
+
+# === Decision points ===
+dp_0_result: null
+dp_0_timestamp: null
+dp_0_decisions: null
+dp_0_confirmed: null
+dp_1_result: null
+dp_1_timestamp: null
+dp_1_decisions: null
+dp_1_confirmed: null
+dp_2_result: null
+dp_2_timestamp: null
+dp_2_decisions: null
+dp_2_confirmed: null
+dp_3_result: null
+dp_3_timestamp: null
+dp_3_decisions: null
+dp_3_confirmed: null
+dp_4_result: null
+dp_4_timestamp: null
+dp_4_decisions: null
+dp_4_confirmed: null
+dp_5_result: null
+dp_5_timestamp: null
+dp_5_decisions: null
+dp_5_confirmed: null
+dp_6_result: null
+dp_6_timestamp: null
+dp_6_decisions: null
+dp_6_confirmed: null
+dp_7_result: null
+dp_7_timestamp: null
+dp_7_decisions: null
+dp_7_confirmed: null

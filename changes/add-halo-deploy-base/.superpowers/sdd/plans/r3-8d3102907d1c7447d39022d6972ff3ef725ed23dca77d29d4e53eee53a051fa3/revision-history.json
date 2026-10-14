@@ -1,0 +1,6 @@
+{
+  "previous_plan_hash": "sha256:27b92bec145f4e6d20cec22e3f815a43d7d85ef4fc074b6c6fb7772eb70b65bf",
+  "previous_revision": 2,
+  "reason": "启动级验证发现 Windows 绑定挂载导致 PostgreSQL initdb 权限失败，改为数据库命名卷并补记实测事实",
+  "evidence": "scope changed: passing evidence invalidated; failures retained"
+}

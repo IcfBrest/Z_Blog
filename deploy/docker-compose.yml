@@ -1,0 +1,74 @@
+# Halo + PostgreSQL 部署底座（基础定义）
+#
+# 本地与线上共用本文件；环境差异全部收敛到 .env 与 docker-compose.prod.yml。
+# 所有变量都带默认值，因此在没有 .env 时也能通过静态校验，
+# 一旦提供 .env（或 --env-file）即以实际值覆盖。
+
+name: sg-blog
+
+services:
+  halodb:
+    image: ${POSTGRES_IMAGE:-postgres:15}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-halo}
+      POSTGRES_USER: ${POSTGRES_USER:-halo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-please}
+      # pg_isready 需要知道用哪个角色探测
+      PGUSER: ${POSTGRES_USER:-halo}
+    volumes:
+      # 必须用命名卷，不能换成 ./data/db 这类绑定挂载：
+      # postgres 的 initdb 会把数据目录 chmod 成 0700，而 Windows 上的绑定挂载
+      # （DrvFs）不支持 chmod，容器会以
+      #   initdb: error: could not change permissions of directory
+      #   "/var/lib/postgresql/data": Operation not permitted
+      # 无限重启。命名卷位于 WSL2 的 ext4 上，权限语义正常。
+      # 数据库的备份与迁移走 pg_dump / pg_restore（见 deploy/backup/backup.sh），
+      # 不依赖目录拷贝，因此命名卷不会给运维带来额外步骤。
+      - halodb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - halo_network
+
+  halo:
+    image: ${HALO_IMAGE:-registry.fit2cloud.com/halo/halo:2.27.0}
+    restart: unless-stopped
+    depends_on:
+      halodb:
+        condition: service_healthy
+    ports:
+      # 只绑定回环地址：本地直接访问 8090，线上由 Caddy 经容器网络反代。
+      # 写成 0.0.0.0:8090 会把 Halo 直接暴露到公网，绕过 HTTPS 与代理头。
+      - "127.0.0.1:8090:8090"
+    environment:
+      JVM_OPTS: ${JVM_OPTS:--Xmx512m -Xms256m}
+    volumes:
+      - ./data/halo2:/root/.halo2
+    command:
+      - --spring.r2dbc.url=r2dbc:pool:postgresql://halodb:5432/${POSTGRES_DB:-halo}
+      - --spring.r2dbc.username=${POSTGRES_USER:-halo}
+      - --spring.r2dbc.password=${POSTGRES_PASSWORD:-change-me-please}
+      - --spring.sql.init.platform=postgresql
+      - --halo.external-url=${HALO_EXTERNAL_URL:-http://localhost:8090}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - halo_network
+
+networks:
+  halo_network:
+    driver: bridge
+
+volumes:
+  halodb_data:
+    # 固定卷名：备份、迁移与 docker volume inspect 时都能直接认出
+    name: sg-blog-halodb-data

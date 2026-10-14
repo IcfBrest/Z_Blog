@@ -1,0 +1,30 @@
+{
+  "mode": "inline",
+  "source": "approved-plan",
+  "rationale": "实现完成：勾选全部任务并订正 1.2/2.1 的任务措辞以匹配实际实现（数据库命名卷、叠加层常驻）",
+  "waves": [
+    {
+      "id": "implementation",
+      "strategy": "serial",
+      "tasks": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4"
+      ],
+      "depends_on": []
+    }
+  ],
+  "artifacts_hash": "sha256:0e75fd2c6054302803c9fc79f4736ace1438ce6650c6e5b892947cd7f508dfb4",
+  "contract_hash": null,
+  "workflow": "full",
+  "revision": 4,
+  "schema_version": 2,
+  "review_policy": "final",
+  "hash": "sha256:aa85d1f3e18ca4f2f1c4cb9bc96d754c16731efba023e72125555b1a69f8ead9"
+}

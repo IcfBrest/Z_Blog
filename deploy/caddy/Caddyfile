@@ -1,0 +1,19 @@
+# Caddy 2：按 {$DOMAIN} 自动申请并续期证书，反代到容器网络内的 Halo。
+#
+# {$DOMAIN} 由 docker-compose.prod.yml 里 caddy 服务的环境变量注入，
+# 换域名只需要改 .env 中的 DOMAIN，然后 docker compose up -d caddy。
+#
+# 校验（无需本地安装 caddy）：
+#   docker run --rm -e DOMAIN=blog.example.com \
+#     -v "$PWD/deploy/caddy:/etc/caddy:ro" caddy:2-alpine \
+#     caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+{$DOMAIN:blog.example.com} {
+	# 上传附件多为已压缩格式（jpg/png/zip），压缩主要作用于 HTML/CSS/JS
+	encode gzip
+
+	# 与 Halo 处于同一 compose 网络，直接使用服务名与容器内端口。
+	# Caddy 默认会补 X-Forwarded-For / X-Forwarded-Proto / X-Forwarded-Host，
+	# Halo 据此还原访客真实 IP 与请求协议。
+	reverse_proxy halo:8090
+}
