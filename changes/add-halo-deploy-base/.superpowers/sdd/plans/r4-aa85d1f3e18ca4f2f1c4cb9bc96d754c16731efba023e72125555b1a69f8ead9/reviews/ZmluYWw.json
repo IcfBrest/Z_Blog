@@ -1,10 +1,10 @@
 {
   "status": "pass",
   "base": "0d5bb456c37bb58714f6f9332e0d9b344138a46f",
-  "head": "3fa63b07907394d4c5a26b60c0ee2c6f783a0c4e",
-  "report": ".superpowers\\sdd\\reviews\\snapshots\\db171947-ee3c-4296-9310-129019c2238e.md",
+  "head": "180eff4ec5472d759015dd5b9085f615bd33462b",
+  "report": ".superpowers\\sdd\\reviews\\snapshots\\bbb5c270-7703-4054-9b14-152debf84b0d.md",
   "report_sha256": "sha256:8cee98e8c686c1efb416d74bca7cc20953b46e9730684c30616c588a35de8cb2",
   "plan_hash": "sha256:aa85d1f3e18ca4f2f1c4cb9bc96d754c16731efba023e72125555b1a69f8ead9",
   "plan_revision": 4,
-  "recorded_at": "2026-10-14T14:24:09.760Z"
+  "recorded_at": "2026-10-14T14:25:00.566Z"
 }
