@@ -1,0 +1,6 @@
+{
+  "previous_plan_hash": "sha256:9681ccc9620b6d6dc814182b64a5f286ad60f2a13b1d434d15901a41b1311cfa",
+  "previous_revision": 1,
+  "reason": "计划内非语义修正：任务 2.2 的校验命令补上 -e DOMAIN 注入（缺失时 {$DOMAIN} 展开为空会让 caddy validate 失败）。交付物与范围不变，沿用 m00311 的计划批准。",
+  "evidence": "scope changed: passing evidence invalidated; failures retained"
+}

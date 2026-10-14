@@ -1,0 +1,8 @@
+# 默认按内容自动判定文本文件
+* text=auto
+
+# Shell 脚本与 Caddyfile 必须保持 LF：
+# 仓库在 Windows 上检出，若被转成 CRLF，脚本在 Linux 服务器上会以
+# "\r: command not found" 失败。
+*.sh text eol=lf
+Caddyfile text eol=lf
