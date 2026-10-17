@@ -1,0 +1,6 @@
+{
+  "previous_plan_hash": "sha256:1ee79cd09968dec145d98e70088d27a753c43160438fef6d7be91177f7f7eec7",
+  "previous_revision": 1,
+  "reason": "批次 1 完成：勾选任务 1.1-1.7，并把 1.4 的骨架路径订正为 src/partials/layout.html（slot 占位，修正 include 机制）",
+  "evidence": "scope changed: passing evidence invalidated; failures retained"
+}

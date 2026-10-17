@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN" xmlns:th="https://www.thymeleaf.org" th:lang="${#locale.toLanguageTag}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content="Halo" />
+
+    <!--
+      各路由模板通过 <template name="head"> 注入标题与元信息。
+      未注入时退化为站点标题，避免出现空 <title>。
+    -->
+    <slot name="head">
+      <title th:text="${site.title}">世界线观测站</title>
+    </slot>
+
+    <!--
+      用 /js/main.ts 而不是 ./js/main.ts：include 是构建期文本替换，路径会按「使用方模板」
+      所在目录解析。错误页在 src/error/error.html，多一层目录，相对写法会解析成
+      src/error/js/main.ts 而构建失败。/ 由 Vite 按 root（即 src/）解析，任何层级都正确。
+    -->
+    <script type="module" src="/js/main.ts"></script>
+  </head>
+  <body class="sg-body">
+    <a class="skip-link" href="#main">跳到正文</a>
+
+    <header class="sg-header">
+      <div class="sg-container sg-header__inner">
+        <a class="sg-brand" th:href="@{/}">
+          <span class="sg-brand__mark">El Psy Kongroo</span>
+          <span class="sg-brand__title" th:text="${site.title}">世界线观测站</span>
+        </a>
+
+        <input
+          class="nav-toggle"
+          type="checkbox"
+          id="sg-nav-toggle"
+          aria-label="展开或收起导航"
+        />
+        <label class="nav-toggle-label" for="sg-nav-toggle" aria-hidden="true">≡</label>
+
+        <nav class="sg-nav" th:with="menu = ${menuFinder.getPrimary()}">
+          <ul class="sg-nav__list">
+            <li><a th:href="@{/}" href="/">首页</a></li>
+            <li><a th:href="@{/archives}" href="/archives">归档</a></li>
+            <li><a th:href="@{/categories}" href="/categories">分类</a></li>
+            <li><a th:href="@{/tags}" href="/tags">标签</a></li>
+            <th:block th:if="${menu != null}">
+              <li th:each="item : ${menu.menuItems}">
+                <a
+                  th:href="@{${item.status.href}}"
+                  th:text="${item.status.displayName}"
+                  th:target="${item.spec.target?.value}"
+                ></a>
+              </li>
+            </th:block>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="sg-main" id="main">
+      <div class="sg-container">
+        <!-- 各路由模板的正文在此注入（include 的默认 slot） -->
+        <slot />
+      </div>
+    </main>
+
+    <footer class="sg-footer">
+      <div class="sg-container">
+        <p class="sg-footer__declare">非官方粉丝作品（fan homage），Steins;Gate © MAGES./Nitroplus</p>
+        <p
+          class="sg-footer__meta"
+          th:if="${theme.config.basic.custom_footer}"
+          th:text="${theme.config.basic.custom_footer}"
+        ></p>
+        <p class="sg-footer__meta">
+          <span th:text="${site.title}">世界线观测站</span>
+          <span> · 世界线收束于此</span>
+        </p>
+        <halo:footer />
+      </div>
+    </footer>
+  </body>
+</html>

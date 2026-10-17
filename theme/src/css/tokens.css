@@ -1,0 +1,54 @@
+/*
+ * 配色 token —— DR-1 规定的唯一颜色来源。
+ *
+ * 任何组件样式都不得写死色值，只能引用本文件里的变量：
+ * 上半部分是原始 token（DR-1 直接规定），下半部分是语义层（组件只认这一层）。
+ * M2 做 α/β 世界线切换时，只需在语义层重新映射，不必改动任何组件。
+ */
+
+:root {
+  /* ── 原始 token（DR-1）──────────────────────────────── */
+  --sg-bg: #0a0a0f;
+  --sg-bg-deep: #050508;
+  --sg-green: #00ff41;
+  --sg-green-dim: #0f9d3a;
+  --sg-nixie: #ff9500;
+  --sg-nixie-deep: #ff6a00;
+  --sg-alpha: #4fc3f7;
+  --sg-beta: #ff6d5a;
+  --sg-text: #e6e6ea;
+  --sg-panel: rgba(16, 16, 24, 0.85);
+
+  /* 原始 token 的派生值（仍属于 token 层，供语义层使用） */
+  --sg-text-dim: #9aa4b2;
+  --sg-border: rgba(0, 255, 65, 0.16);
+  --sg-nixie-glow: rgba(255, 149, 0, 0.35);
+
+  /* ── 语义层（组件只引用这一层）────────────────────────── */
+  --bg: var(--sg-bg);
+  --bg-deep: var(--sg-bg-deep);
+  --surface: var(--sg-panel);
+  --text: var(--sg-text);
+  --text-dim: var(--sg-text-dim);
+  --accent: var(--sg-green);
+  --accent-dim: var(--sg-green-dim);
+  --nixie: var(--sg-nixie);
+  --nixie-deep: var(--sg-nixie-deep);
+  --border: var(--sg-border);
+  --link: var(--sg-green);
+  --focus: var(--sg-nixie);
+
+  /* ── 排版与节奏（非颜色）────────────────────────────── */
+  --font-display: "Orbitron", "Noto Sans SC", sans-serif;
+  --font-body: "JetBrains Mono", "Noto Sans SC", monospace;
+  --container: 46rem;
+  --radius: 2px;
+  --gap: 1.5rem;
+}
+
+/* 世界线 B 占位：M2 会按设置切到 β 世界线，这里先保留结构 */
+:root[data-worldline="beta"] {
+  --accent: var(--sg-beta);
+  --link: var(--sg-beta);
+  --border: var(--sg-beta);
+}

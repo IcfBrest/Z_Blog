@@ -1,0 +1,17 @@
+<include src="layout.html">
+  <template name="head">
+    <title th:text="${site.title}">世界线观测站</title>
+  </template>
+
+  <section class="sg-hero">
+    <p class="sg-hero__kicker">Divergence</p>
+    <h1 class="sg-hero__title" th:text="${site.title}">世界线观测站</h1>
+    <p class="sg-hero__desc">技术 · 生活 · 碎碎念 —— 世界线收束之前的观测记录。</p>
+  </section>
+
+  <ul class="sg-post-list">
+    <include src="post-card.html"></include>
+  </ul>
+
+  <include src="pagination.html"></include>
+</include>

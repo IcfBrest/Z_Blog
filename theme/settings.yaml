@@ -1,0 +1,15 @@
+apiVersion: v1alpha1
+kind: Setting
+metadata:
+  name: z-blog-sg-setting
+spec:
+  forms:
+    - group: basic
+      label: 基础设置
+      formSchema:
+        - $formkit: text
+          name: custom_footer
+          label: 页脚附加文本
+          value: ""
+          placeholder: "留空则不显示"
+          help: "显示在版权声明下方的自定义一行，例如建站时间或联系方式。"

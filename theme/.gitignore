@@ -1,0 +1,12 @@
+# 依赖与构建产物都不入库：templates/ 与 assets/ 由 vite build 生成
+node_modules/
+
+# 构建产物（只用根目录，避免误伤 public/assets/）
+/templates/
+/assets/
+/dist/
+
+# 打包与临时文件
+*.zip
+*.log
+.DS_Store
