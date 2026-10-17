@@ -13,7 +13,12 @@
       <title th:text="${site.title}">世界线观测站</title>
     </slot>
 
-    <script type="module" src="./js/main.ts"></script>
+    <!--
+      用 /js/main.ts 而不是 ./js/main.ts：include 是构建期文本替换，路径会按「使用方模板」
+      所在目录解析。错误页在 src/error/error.html，多一层目录，相对写法会解析成
+      src/error/js/main.ts 而构建失败。/ 由 Vite 按 root（即 src/）解析，任何层级都正确。
+    -->
+    <script type="module" src="/js/main.ts"></script>
   </head>
   <body class="sg-body">
     <a class="skip-link" href="#main">跳到正文</a>

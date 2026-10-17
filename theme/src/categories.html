@@ -6,19 +6,19 @@
   <h1 class="sg-hero__title">分类</h1>
   <p class="sg-hero__desc">技术、生活、碎碎念——每条世界线都有一个入口。</p>
 
-  <ul class="sg-chip-list">
-    <li th:each="cat : ${categories.items}">
+  <!--
+    Halo 2.27 的 /categories 路由把模型属性 categories 直接给成 ArrayList（不是分页对象），
+    因此遍历 ${categories} 本身，不要再取 .items。参考自带主题 theme-earth 的同类页面。
+  -->
+  <p class="sg-hero__desc" th:if="${#lists.isEmpty(categories)}">还没有建分类。</p>
+
+  <ul class="sg-chip-list" th:unless="${#lists.isEmpty(categories)}">
+    <li th:each="cat : ${categories}">
       <a
+        class="sg-chip"
         th:href="@{${cat.status.permalink}}"
         th:text="|${cat.spec.displayName} (${cat.postCount})|"
-        class="sg-chip"
       ></a>
     </li>
   </ul>
-
-  <nav class="sg-pagination" th:if="${categories.hasPrevious() || categories.hasNext()}">
-    <a th:if="${categories.hasPrevious()}" th:href="@{${categories.prevUrl}}">上一页</a>
-    <span th:text="|${categories.page} / ${categories.totalPages}|"></span>
-    <a th:if="${categories.hasNext()}" th:href="@{${categories.nextUrl}}">下一页</a>
-  </nav>
 </include>

@@ -121,6 +121,21 @@ cp theme.yaml settings.yaml "$DEST/"
 3. 组件里只用 `var(--danger)`，不要直接写 `var(--sg-danger)`——M2 切世界线时只改语义层。
 4. 跑 `bash theme/verify/check-theme.sh --tokens`：它会扫描 `tokens.css` 之外的所有样式，发现色值字面量就判失败。
 
+## 本地预览验证
+
+`theme/verify/preview-test.sh` 把「起站 → 初始化 → 装主题 → 激活 → 路由断言」串成一条命令，用来在不用手点控制台的情况下确认主题真的能渲染：
+
+```bash
+bash theme/verify/preview-test.sh          # 验完停站（保留数据）
+bash theme/verify/preview-test.sh --keep   # 验完保持容器运行，方便人工走查
+bash theme/verify/preview-test.sh --purge  # 验完停站并删除数据卷与 deploy/data
+```
+
+- 前提：Docker 已启动、`deploy/` 下的编排可用、`theme/dist/z-blog-sg-<版本>.zip` 已构建。
+- 站点未初始化时它会自动初始化，管理员默认 `admin` / `SgPreviewPass1`；可用 `HALO_ADMIN_USER`、`HALO_ADMIN_PASS`、`HALO_ADMIN_EMAIL`、`HALO_SITE_TITLE`、`BASE_URL` 覆盖。Halo 只允许 `A-Z a-z 0-9` 与 `!@#$%^&*` 作为密码字符，默认值里因此不能出现连字符。
+- 它断言六类路由（首页、归档、分类、标签、作者、404）返回预期状态码，且每页都含主题骨架标记与 DR-5 页脚声明。
+- 想回到「未初始化」状态重来：`bash theme/verify/preview-test.sh --purge`。
+
 ## 人工走查清单
 
 自动化只能断言 CSS 规则与 DOM 结构，真实视觉需要人眼确认。每次改动布局后按下面走一遍（`bash theme/verify/preview-test.sh --keep` 可以把站点留着）：

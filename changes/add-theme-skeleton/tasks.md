@@ -17,9 +17,9 @@
 - [x] **1.5 补齐路由模板**：为首页、文章、独立页、归档、分类、标签、作者与 404 建模板骨架，全部套用统一 layout；完成后构建产物含 10 个路由模板；证明：`bash theme/verify/check-theme.sh --templates`。
 - [x] **1.6 编写主题静态校验**：新建 `theme/verify/check-theme.sh`（`--tokens`/`--fonts`/`--layout`/`--templates`/`--docs`/`--all`），断言对象是构建产物而不是源码；证明：`bash theme/verify/check-theme.sh`。
 - [x] **1.7 记录主题开发说明**：新建 `theme/README.md`，写构建、打包、安装到本地 Halo、新增模板与新增 token 的约定；证明：`bash theme/verify/check-theme.sh --docs`。
-- [ ] **2.1 编写本地预览验证**：新建 `theme/verify/preview-test.sh`，起站、完成 Halo 初始化、安装并激活主题、`curl` 六类路由断言 SG 标记与页脚声明、结束时清理；证明：`bash theme/verify/preview-test.sh`。
-- [ ] **2.2 记录视觉走查清单**：在 `theme/README.md` 追加桌面/移动人工走查清单（导航、页脚、正文对比度、无横向溢出、字体是否生效）；证明：`bash theme/verify/check-theme.sh --docs`。
-- [ ] **3.1 建立推送校验流水线**：新建 `.github/workflows/ci.yml`，对 push 与 PR 跑 `static-check.sh --all` 与主题 `pnpm install && pnpm build && check-theme.sh`；证明：`bash deploy/verify/static-check.sh --all && bash theme/verify/check-theme.sh`（与 CI 完全相同的命令本地跑通）。
+- [x] **2.1 编写本地预览验证**：新建 `theme/verify/preview-test.sh`，起站、完成 Halo 初始化、安装并激活主题、`curl` 六类路由断言 SG 标记与页脚声明、结束时清理；证明：`bash theme/verify/preview-test.sh`。
+- [x] **2.2 记录视觉走查清单**：在 `theme/README.md` 追加桌面/移动人工走查清单（导航、页脚、正文对比度、无横向溢出、字体是否生效）；证明：`bash theme/verify/check-theme.sh --docs`。
+- [x] **3.1 建立推送校验流水线**：新建 `.github/workflows/ci.yml`，对 push 与 PR 跑 `static-check.sh --all` 与主题 `pnpm install && pnpm build && check-theme.sh`；证明：`bash deploy/verify/static-check.sh --all && bash theme/verify/check-theme.sh`（与 CI 完全相同的命令本地跑通）。
 
 ## 实施备注
 

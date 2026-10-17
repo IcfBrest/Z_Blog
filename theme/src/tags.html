@@ -6,15 +6,16 @@
   <h1 class="sg-hero__title">标签</h1>
   <p class="sg-hero__desc">散落在各条世界线上的关键词。</p>
 
-  <ul class="sg-chip-list">
-    <li th:each="tag : ${tags.items}">
-      <a th:href="@{${tag.status.permalink}}" th:text="${tag.spec.displayName}" class="sg-chip"></a>
+  <!-- 与 /categories 同理：Halo 2.27 给的 tags 是 ArrayList，不是分页对象。 -->
+  <p class="sg-hero__desc" th:if="${#lists.isEmpty(tags)}">还没有打标签。</p>
+
+  <ul class="sg-chip-list" th:unless="${#lists.isEmpty(tags)}">
+    <li th:each="tag : ${tags}">
+      <a
+        class="sg-chip"
+        th:href="@{${tag.status.permalink}}"
+        th:text="${tag.spec.displayName}"
+      ></a>
     </li>
   </ul>
-
-  <nav class="sg-pagination" th:if="${tags.hasPrevious() || tags.hasNext()}">
-    <a th:if="${tags.hasPrevious()}" th:href="@{${tags.prevUrl}}">上一页</a>
-    <span th:text="|${tags.page} / ${tags.totalPages}|"></span>
-    <a th:if="${tags.hasNext()}" th:href="@{${tags.nextUrl}}">下一页</a>
-  </nav>
 </include>

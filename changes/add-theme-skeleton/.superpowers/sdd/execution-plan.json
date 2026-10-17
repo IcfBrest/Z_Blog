@@ -1,7 +1,7 @@
 {
   "mode": "inline",
   "source": "approved-plan",
-  "rationale": "用户批准 proposal.md 与 tasks.md；本地预览的 Halo 初始化采用脚本自动创建管理员、凭据存 deploy/.env",
+  "rationale": "批次 1 完成：勾选任务 1.1-1.7，并把 1.4 的骨架路径订正为 src/partials/layout.html（slot 占位，修正 include 机制）",
   "waves": [
     {
       "id": "implementation",
@@ -21,11 +21,11 @@
       "depends_on": []
     }
   ],
-  "artifacts_hash": "sha256:a9e1dd916c0e8bf2829c133977d7b7570e4eb5f2e564fee74a0ec9a5a315b2ed",
+  "artifacts_hash": "sha256:9c44228d6ba0f272a06e1491c66bbf57c912d4177105d671b8e23e3fc5b65397",
   "contract_hash": null,
   "workflow": "full",
-  "revision": 1,
+  "revision": 2,
   "schema_version": 2,
   "review_policy": "final",
-  "hash": "sha256:1ee79cd09968dec145d98e70088d27a753c43160438fef6d7be91177f7f7eec7"
+  "hash": "sha256:924db7bddfb2c79102d0907d6c42402f71fdf0e7998a7a6f646ee48f8af3a901"
 }

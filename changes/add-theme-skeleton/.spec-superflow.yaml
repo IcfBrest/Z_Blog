@@ -10,7 +10,7 @@ completion_reason: null
 revision: null
 
 # === Hashes (fast staleness detection) ===
-artifacts_hash: sha256:a9e1dd916c0e8bf2829c133977d7b7570e4eb5f2e564fee74a0ec9a5a315b2ed
+artifacts_hash: sha256:9c44228d6ba0f272a06e1491c66bbf57c912d4177105d671b8e23e3fc5b65397
 contract_hash: null
 
 # === Execution progress ===
@@ -24,7 +24,7 @@ spec_publication_receipt: null
 
 # === Metadata ===
 change_name: add-theme-skeleton
-last_transition: 2026-10-17T12:56:37.566Z
+last_transition: 2026-10-17T13:15:53.967Z
 last_transition_from: null
 last_transition_to: null
 

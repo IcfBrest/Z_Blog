@@ -18,6 +18,10 @@ ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 TPL="$ROOT/templates"
 ASSETS="$TPL/assets"
 
+# 路由模板清单（相对 templates/）。error 位于子目录：Halo 2.27 的错误页是
+# templates/error/error.html，顶层 error.html 不会被使用（实测 404 会退化为 JSON）。
+TEMPLATES="index post page archives categories category tags tag author error/error"
+
 DO_TOKENS=0
 DO_FONTS=0
 DO_LAYOUT=0
@@ -107,7 +111,7 @@ fi
 if [ "$DO_FONTS" -eq 1 ]; then
   head_ "字体自托管（DR-4）"
 
-  ext_refs="$(grep -Eo 'fonts\.googleapis\.com|fonts\.gstatic\.com|https?://[^"'"'"' )]*\.(woff2?|ttf|otf)' "$CSS_FILE" "$TPL"/*.html 2>/dev/null | head -5 || true)"
+  ext_refs="$(grep -Eo 'fonts\.googleapis\.com|fonts\.gstatic\.com|https?://[^"'"'"' )]*\.(woff2?|ttf|otf)' "$CSS_FILE" "$TPL"/*.html "$TPL"/error/*.html 2>/dev/null | head -5 || true)"
   if [ -z "$ext_refs" ]; then
     ok "构建产物中没有任何外部字体引用"
   else
@@ -169,7 +173,7 @@ if [ "$DO_TEMPLATES" -eq 1 ]; then
   head_ "路由模板"
 
   missing=""
-  for t in index post page archives categories category tags tag author error; do
+  for t in $TEMPLATES; do
     [ -f "$TPL/$t.html" ] || missing="$missing $t"
   done
   if [ -z "$missing" ]; then
@@ -189,7 +193,7 @@ if [ "$DO_TEMPLATES" -eq 1 ]; then
   # 所有路由模板必须内联同一骨架（header 的折叠导航 + footer 的粉丝声明），
   # 且不能残留构建期的 <slot>；残留即内容没被注入。
   nofrag=""
-  for t in index post page archives categories category tags tag author error; do
+  for t in $TEMPLATES; do
     [ -f "$TPL/$t.html" ] || continue
     if ! grep -q 'sg-nav-toggle' "$TPL/$t.html" \
       || ! grep -q '非官方粉丝作品' "$TPL/$t.html" \
@@ -206,7 +210,7 @@ if [ "$DO_TEMPLATES" -eq 1 ]; then
   # 只内联骨架仍可能是空壳：页面自己的内容必须真的被注入。
   # 探针 = 本页独有的内容类名 + head 里存在 <title>。
   shell_page=""
-  for t in index post page archives categories category tags tag author error; do
+  for t in $TEMPLATES; do
     [ -f "$TPL/$t.html" ] || continue
     if ! grep -Eq 'sg-post-item|sg-article-content|sg-archive-year|sg-chip-list|sg-error__code' "$TPL/$t.html" \
       || ! grep -q '<title' "$TPL/$t.html"; then
@@ -222,7 +226,7 @@ if [ "$DO_TEMPLATES" -eq 1 ]; then
   # 10 个模板两两不同：若全部一致，说明又退化成了同一份布局克隆。
   seen_hashes=""
   dup=""
-  for t in index post page archives categories category tags tag author error; do
+  for t in $TEMPLATES; do
     [ -f "$TPL/$t.html" ] || continue
     h="$(sha256sum "$TPL/$t.html" | cut -d' ' -f1)"
     case " $seen_hashes " in

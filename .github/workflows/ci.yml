@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  deploy-baseline:
+    name: 部署底座静态校验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 校验编排、环境变量、手册与换行符
+        run: bash deploy/verify/static-check.sh --all
+
+  theme:
+    name: 主题构建与静态校验
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: theme
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: theme/pnpm-lock.yaml
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+      - name: 构建主题
+        run: pnpm build
+      - name: 主题静态校验
+        run: bash verify/check-theme.sh --all
