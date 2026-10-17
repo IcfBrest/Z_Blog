@@ -1,0 +1,17 @@
+/*
+ * 字体全部自托管（DR-4）：通过 Fontsource 引入 woff2，Vite 会把字体文件
+ * 一起打进主题包的 assets/ 目录，页面不引用任何外部字体服务。
+ *
+ * Fontsource 的 @font-face 自带 font-display: swap；中文按 unicode-range
+ * 拆成多个子集，浏览器只取当前页面用到的切片，不会一次拉全量。
+ */
+
+/* 标题与数字：几何感强的无衬线，接近显示器数字的观感 */
+@import "@fontsource/orbitron/400.css";
+@import "@fontsource/orbitron/700.css";
+
+/* 正文与代码：等宽，保证终端质感与代码块对齐 */
+@import "@fontsource/jetbrains-mono/400.css";
+
+/* 中文正文：Noto Sans SC，按 unicode-range 子集按需加载 */
+@import "@fontsource/noto-sans-sc/400.css";

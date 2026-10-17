@@ -1,0 +1,22 @@
+{
+  "name": "z-blog-sg",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "命运石之门风格的个人博客主题（非官方粉丝作品）",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build && theme-package",
+    "build-only": "vite build"
+  },
+  "devDependencies": {
+    "@halo-dev/theme-package-cli": "^1.0.1",
+    "@halo-dev/vite-plugin-halo-theme": "1.0.3",
+    "vite": "^8.0.0"
+  },
+  "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.0.0",
+    "@fontsource/noto-sans-sc": "^5.0.0",
+    "@fontsource/orbitron": "^5.0.0"
+  }
+}

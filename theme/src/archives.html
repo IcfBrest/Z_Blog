@@ -1,0 +1,31 @@
+<include src="layout.html">
+  <template name="head">
+    <title th:text="|归档 - ${site.title}|">归档</title>
+  </template>
+
+  <h1 class="sg-hero__title">归档</h1>
+  <p class="sg-hero__desc">按世界线收束的顺序，回看每一条观测记录。</p>
+
+  <th:block th:each="archive : ${archives.items}">
+    <section class="sg-archive-year">
+      <h2 th:text="${archive.year}"></h2>
+      <th:block th:each="month : ${archive.months}">
+        <div class="sg-archive-month">
+          <h3 th:text="|${archive.year}-${month.month}|"></h3>
+          <ul class="sg-archive-list">
+            <li th:each="post : ${month.posts}">
+              <time th:text="${#temporals.format(post.spec.publishTime, 'MM-dd')}"></time>
+              <a th:href="@{${post.status.permalink}}" th:text="${post.spec.title}"></a>
+            </li>
+          </ul>
+        </div>
+      </th:block>
+    </section>
+  </th:block>
+
+  <nav class="sg-pagination" th:if="${archives.hasPrevious() || archives.hasNext()}">
+    <a th:if="${archives.hasPrevious()}" th:href="@{${archives.prevUrl}}">上一页</a>
+    <span th:text="|${archives.page} / ${archives.totalPages}|"></span>
+    <a th:if="${archives.hasNext()}" th:href="@{${archives.nextUrl}}">下一页</a>
+  </nav>
+</include>

@@ -1,0 +1,31 @@
+{
+  "mode": "inline",
+  "source": "approved-plan",
+  "rationale": "用户批准 proposal.md 与 tasks.md；本地预览的 Halo 初始化采用脚本自动创建管理员、凭据存 deploy/.env",
+  "waves": [
+    {
+      "id": "implementation",
+      "strategy": "serial",
+      "tasks": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5",
+        "1.6",
+        "1.7",
+        "2.1",
+        "2.2",
+        "3.1"
+      ],
+      "depends_on": []
+    }
+  ],
+  "artifacts_hash": "sha256:a9e1dd916c0e8bf2829c133977d7b7570e4eb5f2e564fee74a0ec9a5a315b2ed",
+  "contract_hash": null,
+  "workflow": "full",
+  "revision": 1,
+  "schema_version": 2,
+  "review_policy": "final",
+  "hash": "sha256:1ee79cd09968dec145d98e70088d27a753c43160438fef6d7be91177f7f7eec7"
+}

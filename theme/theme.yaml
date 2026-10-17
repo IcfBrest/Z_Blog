@@ -1,0 +1,22 @@
+apiVersion: theme.halo.run/v1alpha1
+kind: Theme
+metadata:
+  # 必须与 Halo 内的安装目录名一致：deploy/data/halo2/themes/z-blog-sg
+  name: z-blog-sg
+spec:
+  displayName: 世界线观测站
+  author:
+    name: Zql
+    website: https://github.com/IcfBrest
+  description: 命运石之门风格的二次元个人博客主题（非官方粉丝作品，仅供个人使用）。
+  logo: ""
+  homepage: ""
+  repo: "https://github.com/IcfBrest/Z_Blog"
+  issues: "https://github.com/IcfBrest/Z_Blog/issues"
+  settingName: "z-blog-sg-setting"
+  configMapName: "z-blog-sg-configmap"
+  version: 1.0.0
+  # Halo 2.26 起模板引擎为 Thymeleaf 3.1，本主题按 3.1 的可用变量编写
+  requires: ">=2.20.0"
+  license:
+    - name: "MIT"
