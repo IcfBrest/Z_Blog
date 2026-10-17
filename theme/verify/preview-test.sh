@@ -205,6 +205,7 @@ if [ "$login_code" = "302" ] && [ -n "$login_loc" ] && ! printf '%s' "$login_loc
 else
   bad "登录失败（HTTP $login_code，Location: ${login_loc:-<无>}）"
   head -c 200 "$BODY" 2>/dev/null | sed 's/^/      /'; echo
+  note "若该实例此前用别的密码初始化过，请设置 HALO_ADMIN_PASS，或用 --purge 重建本地站点"
   fail_out
 fi
 
@@ -284,6 +285,11 @@ step "6/6 清理"
 if [ "$KEEP" -eq 1 ]; then
   note "按 --keep 保持容器运行（访问 $BASE_URL）"
 elif [ "$PURGE" -eq 1 ]; then
+  # 破坏性操作：先确认路径确实指向本仓库，避免变量解析异常时误删。
+  if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT/deploy" ]; then
+    bad "无法确认仓库根目录（REPO_ROOT=${REPO_ROOT:-<空>}），拒绝执行删除"
+    fail_out
+  fi
   compose down -v >/dev/null 2>&1 || true
   rm -rf "$REPO_ROOT/deploy/data"
   rm -f "$REPO_ROOT/deploy/.env"
