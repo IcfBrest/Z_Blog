@@ -8,6 +8,7 @@
 #   bash theme/verify/check-theme.sh --layout   # 只查响应式断点
 #   bash theme/verify/check-theme.sh --templates# 只查路由模板齐全
 #   bash theme/verify/check-theme.sh --components # 只查交互组件（世界线/简洁模式/辉光管/动效）
+#   bash theme/verify/check-theme.sh --pages    # 只查页面级结构（横幅/终端/D-Mail/时间轴/分支/卡片/错误页）
 #   bash theme/verify/check-theme.sh --docs     # 只查主题开发说明
 #
 # 退出码：0 全部通过 / 1 有失败 / 2 用法错误 / 3 缺少构建产物
@@ -18,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 TPL="$ROOT/templates"
 ASSETS="$TPL/assets"
+SETTINGS="$ROOT/settings.yaml"
+THEME_YAML="$ROOT/theme.yaml"
 
 # 路由模板清单（相对 templates/）。error 位于子目录：Halo 2.27 的错误页是
 # templates/error/error.html，顶层 error.html 不会被使用（实测 404 会退化为 JSON）。
@@ -28,10 +31,11 @@ DO_FONTS=0
 DO_LAYOUT=0
 DO_TEMPLATES=0
 DO_COMPONENTS=0
+DO_PAGES=0
 DO_DOCS=0
 
 usage() {
-  sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 for arg in "$@"; do
@@ -41,15 +45,16 @@ for arg in "$@"; do
     --layout) DO_LAYOUT=1 ;;
     --templates) DO_TEMPLATES=1 ;;
     --components) DO_COMPONENTS=1 ;;
+    --pages) DO_PAGES=1 ;;
     --docs) DO_DOCS=1 ;;
-    --all) DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_DOCS=1 ;;
+    --all) DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_DOCS=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "未知参数：$arg" >&2; usage >&2; exit 2 ;;
   esac
 done
 
-if [ "$DO_TOKENS$DO_FONTS$DO_LAYOUT$DO_TEMPLATES$DO_COMPONENTS$DO_DOCS" = "000000" ]; then
-  DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_DOCS=1
+if [ "$DO_TOKENS$DO_FONTS$DO_LAYOUT$DO_TEMPLATES$DO_COMPONENTS$DO_PAGES$DO_DOCS" = "0000000" ]; then
+  DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_DOCS=1
 fi
 
 PASS=0
@@ -215,7 +220,7 @@ if [ "$DO_TEMPLATES" -eq 1 ]; then
   shell_page=""
   for t in $TEMPLATES; do
     [ -f "$TPL/$t.html" ] || continue
-    if ! grep -Eq 'sg-post-item|sg-article-content|sg-archive-year|sg-chip-list|sg-error__code' "$TPL/$t.html" \
+    if ! grep -Eq 'sg-post-item|sg-article-content|sg-timeline|sg-branch-list|sg-chip-list|sg-error__code' "$TPL/$t.html" \
       || ! grep -q '<title' "$TPL/$t.html"; then
       shell_page="$shell_page $t"
     fi
@@ -405,6 +410,148 @@ if [ "$DO_COMPONENTS" -eq 1 ]; then
   fi
 fi
 
+# ── 页面级结构 ────────────────────────────────────────────
+if [ "$DO_PAGES" -eq 1 ]; then
+  head_ "页面级结构（DR-2 页面映射）"
+
+  # 1) 首页世界线横幅：节点由分类驱动
+  if grep -q 'sg-worldline' "$TPL/index.html" && grep -q 'sg-worldline__node' "$TPL/index.html"; then
+    ok "首页含世界线横幅（节点由分类驱动）"
+  else
+    bad "首页缺少世界线横幅（.sg-worldline / .sg-worldline__node）"
+  fi
+
+  # 2) 文章详情：CRT 终端容器 + D-Mail 发送记录
+  if grep -q 'sg-terminal' "$TPL/post.html" && grep -q 'sg-terminal__bar' "$TPL/post.html" \
+    && grep -q 'sg-dmail' "$TPL/post.html" && grep -q 'sg-dmail__caption' "$TPL/post.html"; then
+    ok "文章详情含 CRT 终端容器与 D-Mail 发送记录"
+  else
+    bad "文章详情缺少 CRT 终端容器或 D-Mail 元信息"
+  fi
+
+  if grep -q '未观测' "$TPL/post.html"; then
+    ok "无分类时世界线回退为「未观测」"
+  else
+    bad "D-Mail 元信息缺少「未观测」回退文案"
+  fi
+
+  # 3) 归档时间轴
+  if grep -q 'sg-timeline' "$TPL/archives.html" && grep -q 'sg-timeline__year' "$TPL/archives.html" \
+    && grep -q 'sg-timeline__month' "$TPL/archives.html"; then
+    ok "归档为世界线时间轴（年 / 月节点）"
+  else
+    bad "归档缺少时间轴结构（.sg-timeline / __year / __month）"
+  fi
+
+  if grep -q '还没有任何观测记录' "$TPL/archives.html"; then
+    ok "归档含空状态提示"
+  else
+    bad "归档缺少空状态提示"
+  fi
+
+  # 4) 分类 → 世界线分支
+  if grep -q 'sg-branch' "$TPL/category.html" && grep -q '世界线分支' "$TPL/category.html"; then
+    ok "分类页含「世界线分支」徽章"
+  else
+    bad "分类页缺少「世界线分支」徽章"
+  fi
+
+  if grep -q 'sg-branch-list' "$TPL/categories.html" && grep -q 'sg-branch__count' "$TPL/categories.html"; then
+    ok "分类总览每项同时显示名称与文章数"
+  else
+    bad "分类总览缺少分支列表或文章数"
+  fi
+
+  # 5) 关于页成员卡 / 友链网格
+  if grep -q 'sg-member-grid' "$TPL/page.html" && grep -q 'sg-member__name' "$TPL/page.html"; then
+    ok "独立页面含研究所成员卡网格"
+  else
+    bad "独立页面缺少成员卡网格（.sg-member-grid）"
+  fi
+
+  if grep -q 'sg-friend-grid' "$TPL/page.html"; then
+    ok "独立页面含友链卡片网格"
+  else
+    bad "独立页面缺少友链网格（.sg-friend-grid）"
+  fi
+
+  # 6) 错误页终端外壳
+  if grep -q 'sg-error' "$TPL/error/error.html" && grep -q 'sg-terminal' "$TPL/error/error.html"; then
+    ok "错误页为 CRT 错误终端"
+  else
+    bad "错误页缺少终端外壳（.sg-error.sg-terminal）"
+  fi
+
+  # 7) 页面组件类名必须真的进了构建后的样式表
+  missing_css=""
+  for cls in sg-worldline sg-terminal sg-dmail sg-timeline sg-branch sg-member-grid sg-friend-grid sg-card; do
+    grep -q "$cls" "$CSS_FILE" 2>/dev/null || missing_css="$missing_css $cls"
+  done
+  if [ -z "$missing_css" ]; then
+    ok "页面组件类名都出现在构建后的样式表中"
+  else
+    bad "以下页面组件类名不在构建产物里:$missing_css"
+  fi
+
+  # 8) 终端容器的局部扫描线必须与全屏叠层是两条不同规则
+  if grep -qE 'sg-terminal__body:{1,2}after' "$CSS_FILE" && grep -q 'sg-scanline' "$CSS_FILE"; then
+    ok "终端容器内的局部扫描线与全屏叠层分别有规则"
+  else
+    bad "缺少终端容器内的局部扫描线规则（.sg-terminal__body::after）"
+  fi
+
+  # 9) 窄屏横幅收敛（只保留前 3 个节点）
+  if grep -q 'nth-of-type' "$CSS_FILE"; then
+    ok "窄屏只保留前 3 个世界线节点（nth-of-type 规则存在）"
+  else
+    bad "缺少窄屏节点收敛规则（nth-of-type）"
+  fi
+
+  # 10) M3a 新增的三个设置项与默认值
+  missing_setting=""
+  for key in master_name member_page_slug friends_page_slug; do
+    grep -q "name: $key" "$SETTINGS" 2>/dev/null || missing_setting="$missing_setting $key"
+  done
+  if [ -z "$missing_setting" ]; then
+    ok "M3a 设置项齐备（站长称呼 / 关于页 slug / 友链页 slug）"
+  else
+    bad "缺少设置项:$missing_setting"
+  fi
+
+  slug_defaults_ok=1
+  grep -A6 'name: master_name' "$SETTINGS" 2>/dev/null | grep -q 'value: "站长"' || slug_defaults_ok=0
+  grep -A6 'name: member_page_slug' "$SETTINGS" 2>/dev/null | grep -q 'value: "about"' || slug_defaults_ok=0
+  grep -A6 'name: friends_page_slug' "$SETTINGS" 2>/dev/null | grep -q 'value: "friends"' || slug_defaults_ok=0
+  if [ "$slug_defaults_ok" -eq 1 ]; then
+    ok "M3a 设置项默认值合法（站长 / about / friends）"
+  else
+    bad "M3a 设置项默认值不符合预期（期望 站长 / about / friends）"
+  fi
+
+  # 11) 主题版本必须 >= 1.2.0，否则 Halo 认为装的是旧包
+  if grep -qE '^  version: 1\.(2|[3-9])\.' "$ROOT/theme.yaml"; then
+    ok "主题版本不低于 1.2.0"
+  else
+    bad "theme.yaml 的 version 仍是 1.0.x / 1.1.x，需要升到 1.2.0"
+  fi
+
+  # 12) 设置项必须从正确的分组读取：Halo 的 theme.config 按 group 嵌套，
+  #     写成 theme.config.basic.* 会让设置页上的改动静默失效（M2 遗留缺陷）。
+  if grep -q 'theme.config.interaction.divergence_source' "$TPL/index.html" \
+    && ! grep -q 'theme.config.basic.divergence_source' "$TPL/index.html"; then
+    ok "Divergence 数据源从 interaction 分组读取（不是 basic）"
+  else
+    bad "模板从错误的分组读取设置项（interaction vs basic）"
+  fi
+
+  if grep -q 'theme.config.interaction.worldline_default' "$TPL/index.html" \
+    && ! grep -q 'theme.config.basic.worldline_default' "$TPL/index.html"; then
+    ok "世界线与动效设置从 interaction 分组读取（不是 basic）"
+  else
+    bad "布局从错误的分组读取世界线/动效设置（interaction vs basic）"
+  fi
+fi
+
 # ── 主题开发说明 ──────────────────────────────────────────
 if [ "$DO_DOCS" -eq 1 ]; then
   head_ "主题开发说明"
@@ -417,7 +564,7 @@ if [ "$DO_DOCS" -eq 1 ]; then
   fi
 
   if [ -f "$README" ]; then
-    for section in "构建" "打包" "安装到本地 Halo" "新增页面模板" "新增配色 token" "组件与开关" "人工走查清单"; do
+    for section in "构建" "打包" "安装到本地 Halo" "新增页面模板" "新增配色 token" "页面结构" "组件与开关" "人工走查清单"; do
       if grep -q "^#\{1,3\} .*$section" "$README"; then
         ok "说明含章节：$section"
       else

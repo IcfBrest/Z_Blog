@@ -4,10 +4,10 @@
   xmlns:th="https://www.thymeleaf.org"
   th:lang="${#locale.toLanguageTag}"
   th:with="
-    worldline=${#strings.isEmpty(theme.config.basic.worldline_default)} ? 'beta' : ${theme.config.basic.worldline_default},
-    motion=${theme.config.basic.plain_mode_default} ? 'off' : 'on',
-    particles=${theme.config.basic.effects_particles} ? 'on' : 'off',
-    pointerGlow=${theme.config.basic.effects_pointer_glow} ? 'on' : 'off'
+    worldline=${#strings.isEmpty(theme.config.interaction.worldline_default)} ? 'beta' : ${theme.config.interaction.worldline_default},
+    motion=${theme.config.interaction.plain_mode_default} ? 'off' : 'on',
+    particles=${theme.config.interaction.effects_particles} ? 'on' : 'off',
+    pointerGlow=${theme.config.interaction.effects_pointer_glow} ? 'on' : 'off'
   "
   th:attr="data-worldline=${worldline},data-motion=${motion}"
 >

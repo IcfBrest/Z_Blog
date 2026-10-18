@@ -1,0 +1,39 @@
+<!--
+  世界线横幅：原创内联 SVG（折线 + 圆点 + 文字），不使用任何官方素材。
+  节点来自分类树的顶层分类（categoryFinder.listAsTree()），最多 5 个；
+  首页没有「当前分类」上下文，因此第一个节点默认高亮。
+  窄屏：隐藏文字与第 4 个之后的节点，折线由底边框代替（见 main.css 的 480px 段）。
+-->
+<nav class="sg-worldline" aria-label="世界线节点" th:with="nodes=${categoryFinder.listAsTree()}">
+  <th:block th:if="${#lists.isEmpty(nodes)}">
+    <p class="sg-worldline__empty">这条世界线上还没有分类节点。</p>
+  </th:block>
+
+  <svg
+    class="sg-worldline__svg"
+    viewBox="0 0 640 96"
+    role="img"
+    aria-label="世界线节点图"
+    th:unless="${#lists.isEmpty(nodes)}"
+  >
+    <line class="sg-worldline__path" x1="0" y1="48" x2="640" y2="48" />
+    <!-- 分叉线：示意另一条世界线从这里离开主干 -->
+    <path class="sg-worldline__branch" d="M288,48 C320,48 320,26 352,26 L640,26" />
+
+    <g
+      class="sg-worldline__node"
+      th:each="cat, stat : ${nodes}"
+      th:if="${stat.index lt 5}"
+      th:classappend="${stat.index == 0} ? 'is-current' : ''"
+      th:attr="transform=|translate(${64 + stat.index * 128}, 48)|"
+    >
+      <a th:href="@{${cat.status.permalink}}">
+        <title th:text="${cat.spec.displayName}"></title>
+        <circle class="sg-worldline__halo" r="11" />
+        <circle class="sg-worldline__dot" r="7" />
+        <circle class="sg-worldline__core" r="3" />
+        <text class="sg-worldline__label" y="30" text-anchor="middle" th:text="${cat.spec.displayName}"></text>
+      </a>
+    </g>
+  </svg>
+</nav>

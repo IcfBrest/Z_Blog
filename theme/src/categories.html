@@ -12,13 +12,13 @@
   -->
   <p class="sg-hero__desc" th:if="${#lists.isEmpty(categories)}">还没有建分类。</p>
 
-  <ul class="sg-chip-list" th:unless="${#lists.isEmpty(categories)}">
+  <ul class="sg-branch-list" th:unless="${#lists.isEmpty(categories)}">
     <li th:each="cat : ${categories}">
-      <a
-        class="sg-chip"
-        th:href="@{${cat.status.permalink}}"
-        th:text="|${cat.spec.displayName} (${cat.postCount})|"
-      ></a>
+      <a class="sg-branch" th:href="@{${cat.status.permalink}}">
+        <span class="sg-branch__label">世界线分支</span>
+        <span class="sg-branch__name" th:text="${cat.spec.displayName}"></span>
+        <span class="sg-branch__count" th:text="|${cat.postCount} 篇|"></span>
+      </a>
     </li>
   </ul>
 </include>

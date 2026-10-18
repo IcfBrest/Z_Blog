@@ -5,30 +5,33 @@
 
   <article class="sg-article">
     <header class="sg-article-header">
+      <p class="sg-hero__kicker">D-Mail</p>
       <h1 class="sg-article-title" th:text="${post.spec.title}"></h1>
-      <div class="sg-article-meta">
-        <time th:text="${#temporals.format(post.spec.publishTime, 'yyyy-MM-dd')}"></time>
-        <span th:if="${not #lists.isEmpty(post.categories)}">
-          &nbsp;·&nbsp;
-          <a
-            th:each="cat : ${post.categories}"
-            th:href="@{${cat.status.permalink}}"
-            th:text="${cat.spec.displayName}"
-            class="sg-chip"
-          ></a>
-        </span>
-      </div>
+      <!-- DR-2：D-Mail 发送记录元信息（发送时间 / 发信人 / 世界线） -->
+      <include src="post-meta.html"></include>
     </header>
 
-    <div class="sg-article-content" th:utext="${post.content.content}"></div>
+    <!--
+      CRT 终端容器：标题栏 + 局部扫描线（容器内伪元素）+ 内容区。
+      全局扫描线由 layout 提供，这里那条是局部的，用来勾出「终端窗口」的边界。
+    -->
+    <section class="sg-terminal">
+      <div class="sg-terminal__bar" aria-hidden="true">
+        <span class="sg-terminal__led"></span>
+        <span class="sg-terminal__name">D-Mail</span>
+        <span
+          class="sg-terminal__stamp"
+          th:text="${#temporals.format(post.spec.publishTime, 'yyyy-MM-dd')}"
+        ></span>
+      </div>
+      <div class="sg-terminal__body">
+        <div class="sg-article-content" th:utext="${post.content.content}"></div>
+      </div>
+    </section>
 
     <ul class="sg-tags" th:if="${not #lists.isEmpty(post.tags)}">
       <li th:each="tag : ${post.tags}">
-        <a
-          th:href="@{${tag.status.permalink}}"
-          th:text="${tag.spec.displayName}"
-          class="sg-chip"
-        ></a>
+        <a th:href="@{${tag.status.permalink}}" th:text="${tag.spec.displayName}" class="sg-chip"></a>
       </li>
     </ul>
 

@@ -13,6 +13,22 @@ spec:
           value: ""
           placeholder: "留空则不显示"
           help: "显示在版权声明下方的自定义一行，例如建站时间或联系方式。"
+        - $formkit: text
+          name: master_name
+          label: 站长称呼
+          value: "站长"
+          placeholder: "站长"
+          help: "显示在文章详情的「D-Mail 发送记录 · 发信人」与关于页的成员卡上。"
+        - $formkit: text
+          name: member_page_slug
+          label: 关于页 slug
+          value: "about"
+          help: "该 slug 的独立页面会在正文上方渲染研究所成员卡；留空按 about 处理。"
+        - $formkit: text
+          name: friends_page_slug
+          label: 友链页 slug
+          value: "friends"
+          help: "该 slug 的独立页面会把正文渲染成友链卡片网格；留空按 friends 处理。"
     - group: interaction
       label: 交互与动效
       formSchema:

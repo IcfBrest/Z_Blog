@@ -21,12 +21,15 @@ theme/
 │   ├── error/error.html    错误页（Halo 2 要求是 error/error.html，不是顶层 error.html）
 │   ├── partials/           构建期片段（不会单独进入产物）
 │   │   ├── layout.html     统一骨架：页头 / 内容区 / 页脚 / 动效开关
+│   │   ├── worldline-banner.html 首页世界线横幅（内联 SVG，节点来自分类）
+│   │   ├── post-meta.html  文章详情的 D-Mail 发送记录
 │   │   ├── post-card.html  文章卡片
 │   │   └── pagination.html 分页
 │   ├── css/
 │   │   ├── tokens.css      DR-1 配色 token + 世界线/动效变量（唯一颜色来源）
 │   │   ├── fonts.css       自托管字体引入
-│   │   └── main.css        布局与组件样式
+│   │   ├── main.css        布局与组件样式
+│   │   └── pages.css       页面级结构（横幅 / 终端 / 时间轴 / 分支 / 卡片）
 │   └── js/
 │       ├── main.ts         入口：按序装配各模块
 │       ├── logic.mjs       纯逻辑（可被 node 直接单测）
@@ -68,15 +71,15 @@ pnpm build-only     # 只构建：生成 templates/ 与 templates/assets/
 - `templates/assets/main-<hash>.css` —— 打包后的样式，含全部 token 与 `@font-face`
 - `templates/assets/*.woff2` —— 自托管字体分片（Noto Sans SC 按 unicode-range 切片）
 
-体积预算（M2 起，回归时看这三个数）：
+体积预算（M3a 起，回归时看这三个数）：
 
-| 产物 | M1 基线 | M2 当前 | 增量 |
+| 产物 | M1 基线 | M2 | M3a 当前 |
 |---|---|---|---|
-| `templates/assets/main-*.js` | 0.67 kB | 7.00 kB（gzip 2.70 kB） | +6.33 kB |
-| `templates/assets/main-*.css` | 141.78 kB | 142.36 kB（gzip 59.92 kB） | +0.58 kB |
-| `dist/z-blog-sg-<版本>.zip` | 5.48 MB | 5.50 MB | +0.02 MB |
+| `templates/assets/main-*.js` | 0.67 kB | 7.00 kB（gzip 2.70 kB） | 7.19 kB（gzip 2.79 kB） |
+| `templates/assets/main-*.css` | 141.78 kB | 142.36 kB（gzip 59.92 kB） | 153.53 kB（gzip 62.79 kB） |
+| `dist/z-blog-sg-<版本>.zip` | 5.48 MB | 5.50 MB | 5.51 MB |
 
-交互层 JS 的预算是 **25 kB**（未压缩），当前 7.00 kB；主题包的体积几乎全部来自中文字体分片，加动效基本不影响下载量。`check-theme.sh --components` 会断言动画只用 `transform`/`opacity` 且时长一律引用 `--motion-*`，避免回归时悄悄引入重排。
+交互层 JS 的预算是 **25 kB**（未压缩），当前 7.19 kB；主题包的体积几乎全部来自中文字体分片，加页面结构基本不影响下载量。`check-theme.sh --components` 会断言动画只用 `transform`/`opacity` 且时长一律引用 `--motion-*`，避免回归时悄悄引入重排。
 
 ## 打包
 
@@ -175,6 +178,33 @@ cp theme.yaml settings.yaml "$DEST/"
 5. 需要服务端直出的状态走模板变量 + `th:attr`；脚本读属性，不读配置（模板里拿不到主题设置之外的上下文）。
 6. 在 `check-theme.sh --components` 里加一条断言，保证产物里确实出现了该组件。
 
+## 页面结构
+
+六类页面各自对应一个路由模板，骨架统一来自 `src/partials/layout.html`。页面级样式都在 `src/css/pages.css`，颜色一律用语义变量。
+
+| 页面 | 模板 | 关键结构 | 依赖 |
+|---|---|---|---|
+| 首页 | `src/index.html` | `.sg-hero` + `.sg-worldline` 横幅 + `.sg-post-list` | `categoryFinder.listAsTree()` |
+| 文章详情 | `src/post.html` | `.sg-terminal`（标题栏 + 局部扫描线）+ `partials/post-meta.html` 的 `.sg-dmail` | `post.categories[0].spec.displayName` |
+| 归档 | `src/archives.html` | `ol.sg-timeline` → `.sg-timeline__year` → `.sg-timeline__month` | `archives.items[].year/.months[].posts` |
+| 分类总览 | `src/categories.html` | `.sg-branch-list` → `.sg-branch`（名称 + `postCount`） | `categoryFinder.listAsTree()` |
+| 单个分类 | `src/category.html` | `.sg-branch--inline` 徽章 + 终端化文章列表 | `category.spec.displayName` |
+| 独立页面 | `src/page.html` | `.sg-terminal` + 可选 `.sg-member-grid` / `.sg-friend-grid` | `singlePage.spec.slug` + 两个 slug 设置项 |
+| 错误页 | `src/error/error.html` | `.sg-error.sg-terminal` 终端外壳 | `error.status` / `error.title` / `error.detail` |
+
+横幅的节点上限是 5（模板里 `stat.index < 5`），窄屏（≤480px）再用 CSS 的 `:nth-of-type(n + 4)` 只留前三个，所以**上限与窄屏收敛是两处代码**，改一处不生效。
+
+### 如何改关于页与友链页
+
+成员卡与友链卡片的数据都在页面的 Markdown 正文里，模板只负责外壳：
+
+1. 在控制台新建两个独立页面，slug 分别为 `about` 与 `friends`（也可以用设置项 `member_page_slug` / `friends_page_slug` 改成别的 slug）。
+2. 打开 `/about` 时会渲染成员卡网格，内容取 `theme.config.basic.master_name`（默认「站长」）、`site.title` 与固定文案；想加更多成员，在正文里写条目即可，网格样式会把正文里的 `ul > li` 收成卡片。
+3. 打开 `/friends` 时渲染友链网格，正文里每行写一个 Markdown 链接（`- [站点名](https://example.com) —— 一句话描述`），CSS 会把它们变成卡片。
+4. 其它页面（slug 既不是 `about` 也不是 `friends`）只显示终端容器与正文，不会出现网格。
+
+CSS 是靠「页面根节点的类」区分这两页的：`page.html` 先把 `sg-friend-grid` 类挂在正文容器上，样式再对 `.sg-friend-grid li > a` 生效。所以**不要**把这几个类名写进 Markdown，否则样式会被叠加两次。
+
 ## 本地预览验证
 
 `theme/verify/preview-test.sh` 把「起站 → 初始化 → 装主题 → 激活 → 路由断言」串成一条命令，用来在不用手点控制台的情况下确认主题真的能渲染：
@@ -192,6 +222,29 @@ bash theme/verify/preview-test.sh --purge  # 验完停站并删除数据卷与 d
 - 想回到「未初始化」状态重来：用 `--reset`（在验证**之前**重建）。`--purge` 是验证**之后**的清理，两者不能互相替代。
 - **同一个实例上重复跑会失败**：Halo 没有主题升级接口，同名主题装过之后 `install` 一律返回 `400 主题已存在`，此时继续激活只会验证上一次留下的旧产物。脚本会用模板 sha256 比对，发现不一致就直接报错并提示改用 `--reset`。**只改了 `theme.yaml` 的版本号也一样**——版本号变了但主题名没变，仍然装不进去。想在保留文章数据的前提下换主题版本，只能先在 Console 里删除旧主题（外观 → 主题 → 更多 → 删除）再重新安装。
 - `--reset` 之所以要用一次性容器删 `deploy/data`：那里的文件是容器以 root 写入的，Windows 宿主上 `rm -rf` 会逐个 `Permission denied` 并留下残骸（旧主题目录留着，下次就会装上旧模板）。
+
+### 预览验证会造哪些数据
+
+脚本在装主题之前会先灌一份最小内容集，这样页面级结构才有东西可断言：
+
+- 3 个分类：技术（`tech`）、生活（`life`）、随想（`thought`），分别对应三条世界线分支。
+- 3 篇已发布文章：`tech-1`（2026）、`life-1`（2025）、`thought-1`（2026），跨两个年份以便验证归档按年/月分组。
+- 2 个独立页面：`about`（关于）与 `friends`（友链），用来触发成员卡与友链网格。
+
+全部**先查后建**（分类按 `metadata.name`、文章与页面按 `metadata.name`），所以同一实例上重复执行只会打印「已存在，跳过」，不会造出重复数据。
+
+造数据用的端点（实测，写在 `theme/verify/_probe-content.sh` 里验证过）：
+
+| 动作 | 端点 | 结果 |
+|---|---|---|
+| 建分类 | `POST /apis/content.halo.run/v1alpha1/categories` | 201；同名再建返回 400「名称重复」 |
+| 建文章 | `POST /apis/api.console.halo.run/v1alpha1/posts` | 200；请求体是 `{post, content, contentPatch}`，`spec.publish: true` 即直接发布 |
+| 建独立页面 | `POST /apis/api.console.halo.run/v1alpha1/singlepages` | 200；请求体同上，键名是 `page` |
+| 发布（可选） | `PUT /apis/api.console.halo.run/v1alpha1/posts/{name}/publish` | 200，幂等 |
+
+不要用普通资源的 `POST /apis/content.halo.run/v1alpha1/posts`——它需要单独的 snapshot，直接调会 500。
+
+页面级断言覆盖：文章详情含 `sg-terminal` + `sg-dmail` + 世界线分类名；归档同时出现 2025 与 2026 的年份节点；分类总览含 `sg-branch-list` 与篇数；分类页含 `sg-branch`；关于页含 `sg-member-grid` 与「站长」；友链页含 `sg-friend-grid`；404 是终端外壳；首页横幅节点数不少于 3。
 
 ## 人工走查清单
 
@@ -214,6 +267,12 @@ bash theme/verify/preview-test.sh --purge  # 验完停站并删除数据卷与 d
 | Divergence Meter | 首页首屏 | 七位数字 + 小数点 + 百分号，每格都有暗底 + 橙边 + 内辉光（灯窗感，不是一段橙字）；点下方按钮在 1.048596% 与文章数之间滚动切换 |
 | 系统减少动效 | 系统开「减少动态效果」后首次访问（先清 `localStorage` 的 `sg-motion`） | 动效默认关闭，但手动点「开」仍然生效 |
 | 星空与鼠标辉光 | 桌面端移动鼠标 | 星点缓慢上移，指针附近有微弱辉光；触屏与窄屏不应出现 |
+| 世界线横幅 | 首页 hero 下方 | 一条横向世界线，节点数与分类数一致（≤5），首节点高亮；窄屏只留前 3 个 |
+| 文章详情终端 | 打开任意文章 | 标题栏像终端窗口（LED + 名称 + 时间戳），正文上方有「D-Mail 发送记录」三行元信息，世界线名与文章分类一致 |
+| 归档时间轴 | `/archives` | 竖线 + 年份节点 + 月份分组，文章按时间倒序；空站点显示「还没有任何观测记录」 |
+| 分类分支 | `/categories` 与单个分类页 | 每项一张分支卡（标签「世界线分支」+ 名称 + 篇数）；分类页标题下有内联徽章 |
+| 关于页与友链页 | `/about`、`/friends` | 关于页有研究所徽章 + 成员卡；友链页每个链接一张卡片；两页都不出现横向滚动 |
+| 404 终端 | 访问不存在的路径 | 终端窗口样式，含状态码与「未找到该世界线」与返回首页链接 |
 
 发现不符时，先确认是不是没重新构建（`pnpm build-only`），再看 `templates/assets/main-*.css` 里对应规则是否生成。
 

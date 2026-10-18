@@ -6,22 +6,29 @@
   <h1 class="sg-hero__title">归档</h1>
   <p class="sg-hero__desc">按世界线收束的顺序，回看每一条观测记录。</p>
 
-  <th:block th:each="archive : ${archives.items}">
-    <section class="sg-archive-year">
-      <h2 th:text="${archive.year}"></h2>
-      <th:block th:each="month : ${archive.months}">
-        <div class="sg-archive-month">
-          <h3 th:text="|${archive.year}-${month.month}|"></h3>
-          <ul class="sg-archive-list">
+  <p class="sg-hero__desc" th:if="${#lists.isEmpty(archives.items)}">还没有任何观测记录。</p>
+
+  <!--
+    世界线时间轴：有序列表 + CSS 折线。年与月都是节点，文章挂在折线上。
+    折线由 ol.sg-timeline 的伪元素承担（单条竖线），节点用伪元素圆点 + 辉光，
+    避免给每一项画边框导致折线在分页与月份切换处断开。
+  -->
+  <ol class="sg-timeline" th:unless="${#lists.isEmpty(archives.items)}">
+    <li class="sg-timeline__year" th:each="archive : ${archives.items}">
+      <p class="sg-timeline__year-label" th:text="${archive.year}"></p>
+      <ol class="sg-timeline__months">
+        <li class="sg-timeline__month" th:each="month : ${archive.months}">
+          <p class="sg-timeline__month-label" th:text="|${archive.year}-${month.month}|"></p>
+          <ol class="sg-timeline__posts">
             <li th:each="post : ${month.posts}">
               <time th:text="${#temporals.format(post.spec.publishTime, 'MM-dd')}"></time>
               <a th:href="@{${post.status.permalink}}" th:text="${post.spec.title}"></a>
             </li>
-          </ul>
-        </div>
-      </th:block>
-    </section>
-  </th:block>
+          </ol>
+        </li>
+      </ol>
+    </li>
+  </ol>
 
   <nav class="sg-pagination" th:if="${archives.hasPrevious() || archives.hasNext()}">
     <a th:if="${archives.hasPrevious()}" th:href="@{${archives.prevUrl}}">上一页</a>

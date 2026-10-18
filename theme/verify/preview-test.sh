@@ -269,6 +269,86 @@ xsrf="$(awk '$6=="XSRF-TOKEN"{print $7}' "$JAR" | tail -1)"
 ok "已取得 CSRF 令牌"
 note "会话 cookie：$(sed 's/^#HttpOnly_//' "$JAR" | grep -v '^#' | awk '{print $6}' | tr '\n' ' ')"
 
+# ── 造数据（幂等：先查后建） ──────────────────────────────
+step "3b/6 造数据（分类 / 文章 / 独立页面）"
+
+# 端点与请求体来自任务 2.1 的实测（theme/verify/_probe-content.sh）：
+#   分类   POST /apis/content.halo.run/v1alpha1/categories               -> 201
+#   文章   POST /apis/api.console.halo.run/v1alpha1/posts                -> 200（组合端点，含 content）
+#   页面   POST /apis/api.console.halo.run/v1alpha1/singlepages          -> 200
+#   重复分类 -> 400「名称重复」；普通资源的 POST /posts 会 500（缺 snapshot），故走 console 组合端点。
+
+api_get() {
+  curl -s -o "$TMP/api.json" -w '%{http_code}' -b "$JAR" "$BASE_URL$1"
+}
+
+api_post() {
+  curl -s -o "$TMP/api.json" -w '%{http_code}' -b "$JAR" -c "$JAR" -X POST \
+    -H "X-XSRF-TOKEN: $xsrf" -H 'Accept: application/json' -H 'Content-Type: application/json' \
+    --data-binary "@$2" "$BASE_URL$1"
+}
+
+mk_category() {
+  local name="$1" display="$2" slug="$3" code
+  code="$(api_get "/apis/content.halo.run/v1alpha1/categories/$name")"
+  if [ "$code" = "200" ]; then
+    note "分类 $display 已存在，跳过"
+    return 0
+  fi
+  cat > "$TMP/cat.json" <<JSON
+{"apiVersion":"content.halo.run/v1alpha1","kind":"Category","metadata":{"name":"$name","labels":{},"annotations":{}},"spec":{"displayName":"$display","slug":"$slug","description":"","priority":0,"parentName":"","children":[]}}
+JSON
+  code="$(api_post "/apis/content.halo.run/v1alpha1/categories" "$TMP/cat.json")"
+  case "$code" in
+    200|201) ok "创建分类 $display（slug=$slug，HTTP $code）" ;;
+    *) bad "创建分类 $display 失败（HTTP $code）"; head -c 300 "$TMP/api.json" | sed 's/^/      /'; echo ;;
+  esac
+}
+
+mk_post() {
+  local name="$1" title="$2" slug="$3" cat="$4" time="$5" code
+  code="$(api_get "/apis/content.halo.run/v1alpha1/posts/$name")"
+  if [ "$code" = "200" ]; then
+    note "文章 $title 已存在，跳过"
+    return 0
+  fi
+  cat > "$TMP/post.json" <<JSON
+{"post":{"apiVersion":"content.halo.run/v1alpha1","kind":"Post","metadata":{"name":"$name","labels":{},"annotations":{}},"spec":{"title":"$title","slug":"$slug","template":"post","cover":"","deleted":false,"publish":true,"publishTime":"$time","pinned":false,"allowComment":true,"visible":"PUBLIC","priority":0,"excerpt":{"autoGenerate":true,"raw":""},"categories":["$cat"],"tags":[],"htmlMetas":[]}},"content":{"raw":"这是本地预览验证自动创建的探针正文。\n\n用于断言文章详情的终端外壳与 D-Mail 元信息。","content":"探针正文","rawType":"markdown"},"contentPatch":""}
+JSON
+  code="$(api_post "/apis/api.console.halo.run/v1alpha1/posts" "$TMP/post.json")"
+  case "$code" in
+    200|201) ok "创建文章 $title（slug=$slug，世界线 $cat，HTTP $code）" ;;
+    *) bad "创建文章 $title 失败（HTTP $code）"; head -c 300 "$TMP/api.json" | sed 's/^/      /'; echo ;;
+  esac
+}
+
+mk_page() {
+  local name="$1" title="$2" slug="$3" raw="$4" code
+  code="$(api_get "/apis/content.halo.run/v1alpha1/singlepages/$name")"
+  if [ "$code" = "200" ]; then
+    note "独立页面 $title 已存在，跳过"
+    return 0
+  fi
+  cat > "$TMP/page.json" <<JSON
+{"page":{"apiVersion":"content.halo.run/v1alpha1","kind":"SinglePage","metadata":{"name":"$name","labels":{},"annotations":{}},"spec":{"title":"$title","slug":"$slug","template":"page","cover":"","deleted":false,"publish":true,"publishTime":"2026-01-05T08:00:00Z","pinned":false,"allowComment":false,"visible":"PUBLIC","priority":0,"excerpt":{"autoGenerate":true,"raw":""},"htmlMetas":[]}},"content":{"raw":"$raw","content":"$raw","rawType":"markdown"},"contentPatch":""}
+JSON
+  code="$(api_post "/apis/api.console.halo.run/v1alpha1/singlepages" "$TMP/page.json")"
+  case "$code" in
+    200|201) ok "创建独立页面 $title（slug=$slug，HTTP $code）" ;;
+    *) bad "创建独立页面 $title 失败（HTTP $code）"; head -c 300 "$TMP/api.json" | sed 's/^/      /'; echo ;;
+  esac
+}
+
+# 三个分类对应三条世界线分支；三篇文章跨两个年份，用来验证归档时间轴的分组。
+mk_category sg-cat-tech 技术 tech
+mk_category sg-cat-life 生活 life
+mk_category sg-cat-thought 随想 thought
+mk_post sg-post-tech 世界线观测笔记 tech-1 sg-cat-tech 2026-01-05T08:00:00Z
+mk_post sg-post-life 日常观测记录 life-1 sg-cat-life 2025-11-20T09:30:00Z
+mk_post sg-post-thought 随想与杂记 thought-1 sg-cat-thought 2026-02-11T21:00:00Z
+mk_page sg-page-about 关于 about "站长 · 观测者。这里是我在世界线上的观测记录。"
+mk_page sg-page-friends 友链 friends "- [示例站点](https://example.com) —— 另一条世界线上的观测站"
+
 # ── 安装并激活主题 ───────────────────────────────────────
 step "4/6 安装并激活主题"
 
@@ -367,11 +447,10 @@ probe() {
 }
 
 probe "/" "sg-hero" "首页"
-probe "/archives" "sg-archive" "归档"
-probe "/categories" "sg-chip-list" "分类"
+probe "/archives" "sg-timeline" "归档"
+probe "/categories" "sg-branch-list" "分类"
 probe "/tags" "sg-chip-list" "标签"
 probe "/authors/$ADMIN_USER" "sg-hero" "作者"
-probe "/posts/__sg_preview_missing__" "sg-error" "错误页"
 
 # ── 交互层断言（组件都在首屏，只查首页） ────────────────
 step "5b/6 交互组件"
@@ -423,6 +502,62 @@ else
       bad "静态资源返回 HTTP $code：$asset"
     fi
   done
+fi
+
+# ── 页面级结构断言（对着刚造出来的真实数据） ──────────────
+step "5c/6 页面级结构"
+
+# detail <期望状态码（可空格分隔多个）> <路径> <标签> <必须出现的片段...>
+# 错误页正常就返回 404，所以状态码不能一律要求 200。
+detail() {
+  local expected="$1" path="$2" label="$3"
+  shift 3
+  local code problems="" needle
+  code="$(curl -s -H 'Accept: text/html,application/xhtml+xml' -o "$BODY" -w '%{http_code}' "$BASE_URL$path")"
+  case " $expected " in
+    *" $code "*) ;;
+    *) problems="$problems HTTP=$code（期望 $expected）" ;;
+  esac
+  for needle in "$@"; do
+    case "$needle" in
+      !*)
+        # 以 ! 开头表示「必须不出现」，用来断言 about / friends 两种外壳互斥
+        grep -qF -- "${needle#!}" "$BODY" && problems="$problems 不该出现[${needle#!}]"
+        ;;
+      *)
+        grep -qF -- "$needle" "$BODY" || problems="$problems 缺[$needle]"
+        ;;
+    esac
+  done
+  if [ -z "$problems" ]; then
+    ok "$label（$path，$(wc -c < "$BODY" | tr -d ' ') 字节）"
+  else
+    bad "$label（$path）异常：$problems"
+  fi
+}
+
+detail 200 "/archives/tech-1" "文章详情：终端外壳 + D-Mail 发送记录 + 世界线名" \
+  'sg-terminal' 'sg-terminal__bar' 'sg-dmail' 'D-Mail 发送记录' '技术'
+detail 200 "/archives" "归档：世界线时间轴含 2026 与 2025 年份节点" \
+  'sg-timeline' 'sg-timeline__year' 'sg-timeline__month' '2026' '2025'
+detail 200 "/categories" "分类总览：分支列表同时给出名称与篇数" \
+  'sg-branch-list' 'sg-branch__count' '技术'
+detail 200 "/categories/tech" "分类页：世界线分支徽章" \
+  'sg-branch' '世界线分支' '技术'
+detail 200 "/about" "关于页：研究所成员卡网格，且不套用友链外壳" \
+  'sg-member-grid' '未来道具研究所' '站长' '!class="sg-friend-grid"'
+detail 200 "/friends" "友链页：友链卡片网格，且不渲染成员卡" \
+  'class="sg-friend-grid"' 'sg-terminal' '!sg-member-grid'
+detail "404" "/archives/__sg_preview_missing__" "错误页：CRT 错误终端" \
+  'sg-error' 'sg-terminal' '未找到'
+
+# 首页横幅的节点数应与分类数一致（3 个分类都在上限 5 之内）。
+curl -s -H 'Accept: text/html,application/xhtml+xml' -o "$BODY" "$BASE_URL/"
+nodes="$(grep -o 'sg-worldline__node' "$BODY" | wc -l | tr -d ' ')"
+if [ "$nodes" -ge 3 ]; then
+  ok "首页世界线横幅渲染出 $nodes 个分类节点"
+else
+  bad "首页世界线横幅节点过少（$nodes < 3），分类未进入横幅"
 fi
 
 # ── 清理 ─────────────────────────────────────────────────

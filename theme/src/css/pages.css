@@ -1,0 +1,519 @@
+/*
+ * 页面级组件样式（M3a）。
+ * 与 main.css 同样的硬性约束：不得出现任何色值字面量，颜色只能来自 tokens.css 的语义变量。
+ * 动效时长一律用 --motion-*，这样 [data-motion="off"] 与 prefers-reduced-motion 归零后
+ * 自然静止，不需要每个组件再写一遍关闭规则（--motion-loop 归零后 animation 立即结束）。
+ */
+
+/* ── 世界线横幅 ───────────────────────────────────────── */
+
+.sg-worldline {
+  margin: 2rem 0 1.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.sg-worldline__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.sg-worldline__path {
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.sg-worldline__branch {
+  fill: none;
+  stroke: var(--accent-dim);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 6;
+  opacity: 0.7;
+}
+
+.sg-worldline__node text {
+  fill: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.sg-worldline__halo {
+  fill: none;
+  stroke: var(--nixie);
+  stroke-width: 2;
+  opacity: 0;
+}
+
+.sg-worldline__dot {
+  fill: var(--surface);
+  stroke: var(--accent-dim);
+  stroke-width: 1.5;
+  transition: stroke var(--motion-base) var(--motion-ease);
+}
+
+.sg-worldline__core {
+  fill: var(--accent-dim);
+  transition: fill var(--motion-base) var(--motion-ease);
+}
+
+.sg-worldline__node:hover .sg-worldline__dot,
+.sg-worldline__node.is-current .sg-worldline__dot {
+  stroke: var(--nixie);
+}
+
+.sg-worldline__node:hover .sg-worldline__core,
+.sg-worldline__node.is-current .sg-worldline__core {
+  fill: var(--nixie);
+}
+
+.sg-worldline__node.is-current text {
+  fill: var(--nixie);
+}
+
+.sg-worldline__node.is-current .sg-worldline__halo {
+  animation: sg-worldline-pulse var(--motion-loop) var(--motion-ease) infinite;
+}
+
+@keyframes sg-worldline-pulse {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.sg-worldline__empty {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+/* ── CRT 终端容器 ─────────────────────────────────────── */
+
+.sg-terminal {
+  position: relative;
+  margin: 1.5rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.sg-terminal__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-deep);
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sg-terminal__led {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--nixie);
+  box-shadow: 0 0 8px var(--glow);
+  flex: none;
+}
+
+.sg-terminal__name {
+  color: var(--accent);
+}
+
+.sg-terminal__stamp {
+  margin-left: auto;
+  color: var(--text-dim);
+}
+
+.sg-terminal__body {
+  position: relative;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+/* 容器内的局部扫描线：与 layout 的全屏叠层是两条不同规则 */
+.sg-terminal__body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    180deg,
+    var(--scanline) 0,
+    var(--scanline) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.6;
+}
+
+.sg-terminal__body > * {
+  position: relative;
+  z-index: 1;
+}
+
+.sg-terminal--friends {
+  border-color: var(--accent-dim);
+}
+
+/* ── D-Mail 发送记录 ──────────────────────────────────── */
+
+.sg-dmail {
+  margin: 1rem 0 0;
+  padding: 0.5rem 0 0.5rem 0.85rem;
+  border-left: 2px solid var(--nixie);
+}
+
+.sg-dmail__caption {
+  margin: 0 0 0.4rem;
+  color: var(--nixie);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.sg-dmail__list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.sg-dmail__row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.sg-dmail__row dt {
+  flex: none;
+  min-width: 4.5em;
+  color: var(--text-dim);
+}
+
+.sg-dmail__row dd {
+  margin: 0;
+  color: var(--text);
+}
+
+/* ── 世界线时间轴（归档） ─────────────────────────────── */
+
+.sg-timeline {
+  position: relative;
+  margin: 1.5rem 0;
+  padding-left: 1.75rem;
+  list-style: none;
+}
+
+.sg-timeline::before {
+  content: "";
+  position: absolute;
+  left: 0.3rem;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 1px;
+  background: var(--border);
+}
+
+.sg-timeline__year {
+  position: relative;
+  margin-bottom: 1.75rem;
+}
+
+.sg-timeline__year::before {
+  content: "";
+  position: absolute;
+  left: -1.6rem;
+  top: 0.55rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--nixie);
+  box-shadow: 0 0 0.5rem var(--glow);
+}
+
+.sg-timeline__year-label {
+  margin: 0 0 0.75rem;
+  color: var(--nixie);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+}
+
+.sg-timeline__months {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sg-timeline__month {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.sg-timeline__month::before {
+  content: "";
+  position: absolute;
+  left: -1.5rem;
+  top: 0.45rem;
+  width: 0.32rem;
+  height: 0.32rem;
+  border-radius: 50%;
+  background: var(--accent-dim);
+}
+
+.sg-timeline__month-label {
+  margin: 0 0 0.35rem;
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+}
+
+.sg-timeline__posts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.sg-timeline__posts li {
+  display: flex;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.sg-timeline__posts time {
+  flex: none;
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  padding-top: 0.15rem;
+}
+
+/* ── 世界线分支徽章 ───────────────────────────────────── */
+
+.sg-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.28rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-deep);
+  font-size: 0.8rem;
+  text-decoration: none;
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.sg-branch:hover {
+  border-color: var(--accent-dim);
+}
+
+.sg-branch--inline {
+  margin: 0.5rem 0 0;
+}
+
+.sg-branch__label {
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.sg-branch__name {
+  color: var(--accent);
+}
+
+.sg-branch__count {
+  color: var(--nixie);
+}
+
+.sg-branch-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 1.25rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── 列表卡片的终端化与分支标记 ───────────────────────── */
+
+.sg-card {
+  position: relative;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--border);
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.sg-card:hover {
+  border-left-color: var(--accent-dim);
+}
+
+.sg-card__marker {
+  margin: 0 0 0.2rem;
+  color: var(--nixie-deep);
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.sg-card__branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sg-chip--branch {
+  padding: 0.1rem 0.45rem;
+  font-size: 0.72rem;
+}
+
+/* ── 关于页成员卡 ─────────────────────────────────────── */
+
+.sg-member-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  margin: 1.75rem 0 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.sg-member {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.sg-member__badge {
+  margin: 0 0 0.35rem;
+  color: var(--nixie);
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.sg-member__name {
+  margin: 0 0 0.25rem;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.sg-member__role,
+.sg-member__site {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+/* ── 友链卡片网格 ─────────────────────────────────────── */
+
+.sg-friend-grid .sg-article-content ul {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sg-friend-grid .sg-article-content li {
+  margin: 0;
+}
+
+.sg-friend-grid .sg-article-content li > a {
+  display: block;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-deep);
+  color: var(--link);
+  text-decoration: none;
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.sg-friend-grid .sg-article-content li > a:hover {
+  border-color: var(--accent-dim);
+}
+
+/* ── 错误页终端 ───────────────────────────────────────── */
+
+.sg-error.sg-terminal {
+  margin: 2rem 0;
+}
+
+.sg-error__code {
+  margin: 0;
+  color: var(--nixie);
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  letter-spacing: 0.12em;
+}
+
+/* ── 响应式 ───────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .sg-timeline {
+    padding-left: 1.4rem;
+  }
+
+  .sg-terminal__body {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 窄屏：横幅只留 3 个圆点，标题文字隐藏，折线用底边框代替 */
+  .sg-worldline__node text {
+    display: none;
+  }
+
+  .sg-worldline__node:nth-of-type(n + 4) {
+    display: none;
+  }
+
+  .sg-worldline__path,
+  .sg-worldline__branch {
+    display: none;
+  }
+
+  .sg-worldline {
+    border-bottom: 1px dashed var(--border);
+    padding-bottom: 0.75rem;
+  }
+
+  .sg-dmail__row {
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .sg-timeline {
+    padding-left: 1.2rem;
+  }
+
+  .sg-timeline__posts li {
+    flex-direction: column;
+    gap: 0.05rem;
+  }
+}
+
+/* 简洁模式：横幅的呼吸辉光必须停（transition 时长已由 --motion-* 归零） */
+:root[data-motion="off"] .sg-worldline__node.is-current .sg-worldline__halo {
+  animation: none;
+  opacity: 0.2;
+}
