@@ -3,10 +3,49 @@
     <title th:text="${site.title}">世界线观测站</title>
   </template>
 
-  <section class="sg-hero">
+  <!--
+    Divergence Meter 的初值由服务端直出：data-value 是终值，可见文本也已按位拆成
+    辉光管单元（数字 / 小数点 / 百分号）。JS 只负责之后的滚动过渡，因此禁用脚本时
+    数值与排版都正确。
+  -->
+  <section
+    class="sg-hero"
+    th:with="
+      source=${#strings.isEmpty(theme.config.basic.divergence_source) ? 'attractor' : theme.config.basic.divergence_source},
+      value=${#strings.equals(#strings.isEmpty(theme.config.basic.divergence_source) ? 'attractor' : theme.config.basic.divergence_source, 'live') ? #numbers.formatDecimal((posts != null ? posts.total : 0), 1, 6, 'POINT') : '1.048596'},
+      liveValue=${#numbers.formatDecimal((posts != null ? posts.total : 0), 1, 6, 'POINT')}
+    "
+  >
     <p class="sg-hero__kicker">Divergence</p>
+
+    <div
+      class="sg-divergence"
+      role="img"
+      th:attr="data-value=${value},data-live=${liveValue},data-source=${source},aria-label=${'世界线变动率 ' + value + '%'}"
+    >
+      <span class="sg-divergence__value">
+        <th:block th:each="i : ${#numbers.sequence(0, #strings.length(value) - 1)}">
+          <span
+            th:with="ch=${#strings.substring(value, i, i + 1)}"
+            th:classappend="${ch == '.' ? 'sg-divergence-dot' : 'sg-divergence-digit'}"
+            th:text="${ch}"
+          >0</span>
+        </th:block>
+        <span class="sg-divergence__percent">%</span>
+      </span>
+      <button
+        class="sg-divergence__toggle"
+        type="button"
+        aria-pressed="false"
+        th:attr="aria-label=${source == 'attractor' ? '当前显示世界线变动率，点击切换到站点真实文章数' : '当前显示站点真实文章数，点击切换到世界线变动率'}"
+      >
+        <span th:text="${source == 'attractor' ? '世界线变动率' : '站点观测值'}">世界线变动率</span>
+      </button>
+    </div>
+
     <h1 class="sg-hero__title" th:text="${site.title}">世界线观测站</h1>
     <p class="sg-hero__desc">技术 · 生活 · 碎碎念 —— 世界线收束之前的观测记录。</p>
+    <p class="sg-hero__typing" data-typing="El Psy Kongroo." aria-hidden="true">El Psy Kongroo.</p>
   </section>
 
   <ul class="sg-post-list">

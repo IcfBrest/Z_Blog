@@ -1,9 +1,45 @@
 <!doctype html>
-<html lang="zh-CN" xmlns:th="https://www.thymeleaf.org" th:lang="${#locale.toLanguageTag}">
+<html
+  lang="zh-CN"
+  xmlns:th="https://www.thymeleaf.org"
+  th:lang="${#locale.toLanguageTag}"
+  th:with="
+    worldline=${#strings.isEmpty(theme.config.basic.worldline_default)} ? 'beta' : ${theme.config.basic.worldline_default},
+    motion=${theme.config.basic.plain_mode_default} ? 'off' : 'on',
+    particles=${theme.config.basic.effects_particles} ? 'on' : 'off',
+    pointerGlow=${theme.config.basic.effects_pointer_glow} ? 'on' : 'off'
+  "
+  th:attr="data-worldline=${worldline},data-motion=${motion}"
+>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content="Halo" />
+
+    <!--
+      首屏 boot 脚本：在样式生效前回放访客偏好，避免先按默认世界线绘制再跳变。
+      只在 localStorage 有合法值时才覆盖服务端渲染的默认属性；隐私模式下
+      localStorage 会抛异常，因此整体包在 try/catch 里。
+      data-motion-source="user" 让 CSS 能区分「访客手动打开动效」与「服务端默认开启」，
+      前者优先于系统 prefers-reduced-motion。
+    -->
+    <script>
+      (function () {
+        var root = document.documentElement;
+        try {
+          var w = localStorage.getItem("sg-worldline");
+          if (w === "alpha" || w === "beta") root.setAttribute("data-worldline", w);
+          var m = localStorage.getItem("sg-motion");
+          if (m === "on" || m === "off") {
+            root.setAttribute("data-motion", m);
+            root.setAttribute("data-motion-source", "user");
+          }
+        } catch (e) {
+          /* localStorage 不可用时保持服务端默认值 */
+        }
+        root.setAttribute("data-booted", "1");
+      })();
+    </script>
 
     <!--
       各路由模板通过 <template name="head"> 注入标题与元信息。
@@ -23,12 +59,38 @@
   <body class="sg-body">
     <a class="skip-link" href="#main">跳到正文</a>
 
+    <!-- CRT 扫描线与背景粒子：纯装饰层，不参与语义与焦点顺序 -->
+    <div class="sg-scanline" aria-hidden="true"></div>
+    <canvas class="sg-particles" aria-hidden="true" th:attr="data-enabled=${particles}"></canvas>
+    <div class="sg-glow" aria-hidden="true" th:attr="data-enabled=${pointerGlow}"></div>
+
     <header class="sg-header">
       <div class="sg-container sg-header__inner">
         <a class="sg-brand" th:href="@{/}">
           <span class="sg-brand__mark">El Psy Kongroo</span>
           <span class="sg-brand__title" th:text="${site.title}">世界线观测站</span>
         </a>
+
+        <div class="sg-controls">
+          <button
+            class="sg-control"
+            type="button"
+            id="sg-worldline-toggle"
+            th:attr="aria-label=${worldline} == 'beta' ? '当前为 β 世界线，点击切换到 α 世界线' : '当前为 α 世界线，点击切换到 β 世界线'"
+          >
+            <span class="sg-control__label">世界线</span>
+            <span class="sg-control__value" data-worldline-label th:text="${worldline} == 'beta' ? 'β' : 'α'">β</span>
+          </button>
+          <button
+            class="sg-control"
+            type="button"
+            id="sg-motion-toggle"
+            th:attr="aria-label=${motion} == 'off' ? '动效已关闭，点击开启' : '动效已开启，点击关闭'"
+          >
+            <span class="sg-control__label">动效</span>
+            <span class="sg-control__value" data-motion-label th:text="${motion} == 'off' ? '关' : '开'">开</span>
+          </button>
+        </div>
 
         <input
           class="nav-toggle"

@@ -565,3 +565,228 @@ img {
     font-size: 1rem;
   }
 }
+
+/* ── 交互层：世界线切换与简洁模式控件 ───────────────────── */
+
+.sg-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.sg-control {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease);
+}
+
+.sg-control:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+}
+
+.sg-control__value {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ── CRT 装饰层：扫描线、粒子、鼠标辉光 ─────────────────── */
+
+.sg-main,
+.sg-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.sg-scanline {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0.35;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--scanline) 0,
+    var(--scanline) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  animation: sg-scan var(--motion-loop) linear infinite;
+}
+
+@keyframes sg-scan {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(3px);
+  }
+}
+
+.sg-particles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.sg-particles[data-enabled="off"] {
+  display: none;
+}
+
+.sg-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle 12rem at var(--glow-x, 50%) var(--glow-y, 50%),
+    var(--glow),
+    transparent 70%
+  );
+  transition: opacity var(--motion-base) var(--motion-ease);
+}
+
+.sg-glow[data-active="1"] {
+  opacity: 1;
+}
+
+.sg-glow[data-enabled="off"] {
+  display: none;
+}
+
+/* 简洁模式：装饰层直接隐藏，不依赖把时长归零 */
+:root[data-motion="off"] .sg-scanline,
+:root[data-motion="off"] .sg-particles,
+:root[data-motion="off"] .sg-glow {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion-source="user"]) .sg-scanline,
+  :root:not([data-motion-source="user"]) .sg-particles,
+  :root:not([data-motion-source="user"]) .sg-glow {
+    display: none;
+  }
+}
+
+/* ── Divergence Meter（辉光管）──────────────────────────── */
+
+.sg-divergence {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 1.5rem var(--nixie-glow);
+}
+
+.sg-divergence__value {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 6vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--nixie);
+  text-shadow: 0 0 0.6rem var(--nixie-glow);
+  font-variant-numeric: tabular-nums;
+}
+
+.sg-divergence-digit {
+  display: inline-block;
+  min-width: 0.62em;
+  text-align: center;
+}
+
+.sg-divergence-dot,
+.sg-divergence__percent {
+  display: inline-block;
+  opacity: 0.85;
+}
+
+.sg-divergence__toggle {
+  padding: 0.25rem 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: color var(--motion-fast) var(--motion-ease);
+}
+
+.sg-divergence__toggle:hover {
+  color: var(--nixie);
+}
+
+/* ── 打字机文本 ───────────────────────────────────────── */
+
+.sg-hero__typing {
+  min-height: 1.2em;
+  margin: 1rem 0 0;
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  letter-spacing: 0.24em;
+  color: var(--term);
+  text-transform: uppercase;
+}
+
+.sg-hero__typing::after {
+  content: "_";
+  animation: sg-blink var(--motion-slow) steps(2, start) infinite;
+}
+
+.sg-hero__typing[data-typing-done="1"]::after {
+  animation: none;
+}
+
+@keyframes sg-blink {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ── 交互层的窄屏适配 ─────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .sg-controls {
+    order: 2;
+    margin-right: 0.5rem;
+  }
+
+  .nav-toggle-label {
+    margin-left: 0;
+  }
+
+  .sg-divergence {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .sg-control__label {
+    display: none;
+  }
+}
