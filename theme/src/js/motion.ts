@@ -41,12 +41,15 @@ export function initMotion(): void {
     if (resolved.source === "user") root.setAttribute("data-motion-source", "user");
     else root.removeAttribute("data-motion-source");
 
-    if (label) label.textContent = resolved.motion === "off" ? "关" : "开";
+    // 标签读作「简洁模式 关/开」：motion=off 即简洁模式开
+    if (label) label.textContent = resolved.motion === "off" ? "开" : "关";
     if (button) {
       button.setAttribute("aria-pressed", resolved.motion === "off" ? "true" : "false");
       button.setAttribute(
         "aria-label",
-        resolved.motion === "off" ? "动效已关闭，点击开启" : "动效已开启，点击关闭",
+        resolved.motion === "off"
+          ? "简洁模式已开启，点击恢复动效"
+          : "简洁模式已关闭，点击开启简洁模式",
       );
     }
 

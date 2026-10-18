@@ -29,6 +29,11 @@
   --sg-beta-border: rgba(255, 109, 90, 0.18);
   --sg-scanline: rgba(0, 255, 65, 0.055);
   --sg-glow: rgba(255, 149, 0, 0.1);
+  /* 辉光管「灯窗」：数字单元的底色、边缘与内辉光 */
+  --sg-nixie-well: rgba(255, 149, 0, 0.07);
+  --sg-nixie-well-deep: rgba(120, 50, 0, 0.35);
+  --sg-nixie-edge: rgba(255, 149, 0, 0.3);
+  --sg-nixie-glass: rgba(255, 255, 255, 0.04);
 
   /* ── 语义层（组件只引用这一层）────────────────────────── */
   --bg: var(--sg-bg);
@@ -40,6 +45,10 @@
   --accent-dim: var(--sg-green-dim);
   --nixie: var(--sg-nixie);
   --nixie-deep: var(--sg-nixie-deep);
+  --nixie-well: var(--sg-nixie-well);
+  --nixie-well-deep: var(--sg-nixie-well-deep);
+  --nixie-edge: var(--sg-nixie-edge);
+  --nixie-glass: var(--sg-nixie-glass);
   --border: var(--sg-border);
   --link: var(--sg-green);
   --focus: var(--sg-nixie);

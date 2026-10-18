@@ -85,10 +85,11 @@
             class="sg-control"
             type="button"
             id="sg-motion-toggle"
-            th:attr="aria-label=${motion} == 'off' ? '动效已关闭，点击开启' : '动效已开启，点击关闭'"
+            title="简洁模式：一键关闭扫描线、粒子、辉光与打字机等全部动效"
+            th:attr="aria-label=${motion} == 'off' ? '简洁模式已开启，点击恢复动效' : '简洁模式已关闭，点击开启简洁模式'"
           >
-            <span class="sg-control__label">动效</span>
-            <span class="sg-control__value" data-motion-label th:text="${motion} == 'off' ? '关' : '开'">开</span>
+            <span class="sg-control__label">简洁模式</span>
+            <span class="sg-control__value" data-motion-label th:text="${motion} == 'off' ? '开' : '关'">关</span>
           </button>
         </div>
 

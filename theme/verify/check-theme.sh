@@ -338,6 +338,29 @@ if [ "$DO_COMPONENTS" -eq 1 ]; then
     bad "首页缺少 Divergence Meter 挂载点或 data-value 初值"
   fi
 
+  # 6) 「简洁模式」必须是一个看得见的名字。
+  #    事故背景：控件原本标成「动效 开/关」，访客在页面上找不到「简洁模式」；
+  #    窄屏还会把标签整个隐藏，只剩一个「关」字。所以这里锁死字样与可见性。
+  if grep -q '简洁模式' "$TPL/index.html"; then
+    ok "页头控件以「简洁模式」为名（不是含糊的「动效」）"
+  else
+    bad "页头缺少「简洁模式」字样，访客无法发现该开关"
+  fi
+
+  if grep -q 'sg-control__label' "$CSS_FILE"; then
+    ok "控件标签有对应样式（.sg-control__label）"
+  else
+    bad "样式表缺少 .sg-control__label"
+  fi
+
+  # 精确到「选择器含 .sg-control__label 且声明里有 display:none」这一条规则，
+  # 因为构建产物是压缩过的，按行号或范围匹配会把相邻规则也算进来。
+  if grep -oE '\.sg-control__label[^{}]*\{[^}]*\}' "$CSS_FILE" 2>/dev/null | grep -q 'display: *none'; then
+    bad "窄屏把控件标签 display:none 了，访客会找不到简洁模式"
+  else
+    ok "窄屏未隐藏控件标签（≤480px 仍能看到「简洁模式」）"
+  fi
+
   # 6) JS 里写死的 sg-* 类名必须真的存在于样式表或模板中。
   #    这条断言来自一次真实事故：divergence.ts 用 sg-divergence__digit 渲染单元，
   #    而 CSS 已经改名成 sg-divergence-digit，结果首屏 JS 一执行，辉光管就变成裸文字。
