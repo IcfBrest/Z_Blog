@@ -2,10 +2,10 @@
 # Progress and legacy approvals. Recover missing evidence; never infer approval from artifact existence.
 
 # === Core state ===
-state: executing
+state: closing
 workflow: full
 workflow_variant: planned
-completion_outcome: null
+completion_outcome: verified
 completion_reason: null
 revision: null
 
@@ -18,13 +18,13 @@ execution_mode: null
 execution_plan_hash: null
 execution_plan_revision: null
 batches_completed: 0
-test_result: null
+test_result: pass: bash deploy/verify/static-check.sh --all && bash theme/verify/check-theme.sh --all
 spec_merged: true
 spec_publication_receipt: eyJ2ZXJzaW9uIjoxLCJzb3VyY2VfaGFzaCI6InNoYTI1NjplOTNjMDExZGUxOTFiNWYzZWMzNmRjYzQwZDhmZDRjNTQ4MTlmYzY5MTQ4NDNmMDE2ZWZiOTY0YzMxMDUxYTBjIiwiYmFzZWxpbmVfYmVmb3JlX2hhc2giOiJzaGEyNTY6MWFlOTQyZjAzYTQ5N2Q5ZDE3OTJiMTM1ZTE0OGQ0NDFkZWUzMmU5NTQ5MDNlOTQyZjk3NGIzM2I0NDhmODBlYyIsImJhc2VsaW5lX2FmdGVyX2hhc2giOiJzaGEyNTY6MjE3NDYwOTRkMDkwNTkxMTUyYTc3NTI4MjkyMmU1ODQwMjA0ZDI4ZjRhMzE4NDhjNDY5MTY4NTZlNWViYjE5MyIsImNhcGFiaWxpdGllcyI6WyJ0aGVtZS1pbnRlcmFjdGlvbiJdfQ
 
 # === Metadata ===
 change_name: add-core-components
-last_transition: 2026-10-18T06:56:42.365Z
+last_transition: 2026-10-18T07:45:34.109Z
 last_transition_from: null
 last_transition_to: null
 
