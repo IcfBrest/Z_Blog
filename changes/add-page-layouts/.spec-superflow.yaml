@@ -2,10 +2,10 @@
 # Progress and legacy approvals. Recover missing evidence; never infer approval from artifact existence.
 
 # === Core state ===
-state: executing
+state: closing
 workflow: full
 workflow_variant: planned
-completion_outcome: null
+completion_outcome: verified
 completion_reason: null
 revision: null
 
@@ -18,13 +18,13 @@ execution_mode: null
 execution_plan_hash: null
 execution_plan_revision: null
 batches_completed: 0
-test_result: null
+test_result: pass: bash deploy/verify/static-check.sh --all && bash theme/verify/check-theme.sh --all
 spec_merged: true
 spec_publication_receipt: eyJ2ZXJzaW9uIjoxLCJzb3VyY2VfaGFzaCI6InNoYTI1NjozOTkwZWFjMjVmNDBhYjNmNzRkYTM5OTJhZTUwODBhNjM0NTMyZDNlMDgxOTg5ZTQ3ZjI4YWE1ODVkOTVkMzc4IiwiYmFzZWxpbmVfYmVmb3JlX2hhc2giOiJzaGEyNTY6ZDQ3NWZlNTIxNGJjZTg3YmMyMzJmNWY2ZjFmZTlmY2JiNmJhOWE1NmFlYThjM2JkYjVhNzIxZDA3Yjg5ZGI4MSIsImJhc2VsaW5lX2FmdGVyX2hhc2giOiJzaGEyNTY6NTcyOTRiMTE0OWM0ZTk5ZjVjNmFhODVkZjFkMzkxNzI5ZmI2ODAyYmY3MTY0NDI2NjE3OTg1Mjg1YjJhYTZmNyIsImNhcGFiaWxpdGllcyI6WyJ0aGVtZS1wYWdlcyJdfQ
 
 # === Metadata ===
 change_name: add-page-layouts
-last_transition: 2026-10-18T11:58:25.406Z
+last_transition: 2026-10-18T11:59:39.549Z
 last_transition_from: null
 last_transition_to: null
 
