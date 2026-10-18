@@ -14,12 +14,14 @@
 |--------|------|------|
 | **M0** | 环境与部署底座（Halo + PostgreSQL + Caddy + Docker Compose、备份脚本、运维手册） | ✅ **已完成** |
 | **M1** | 主题骨架（theme-starter 工程、配色 tokens、基础布局、字体自托管） | ✅ **已完成** |
-| M2 | 核心组件（Divergence Meter、CRT 动效、双主题切换、简洁模式） | ⏳ 待开始 |
+| **M2** | 核心组件（Divergence Meter、CRT 动效、双主题切换、简洁模式） | ✅ **已完成** |
 | M3 | 页面铺开（首页 / 列表 / 详情 / 归档 / 关于 / 友链 / 404、D-Mail 密码解锁） | ⏳ 待开始 |
 | M4 | 集成（Artalk 评论、搜索、看板娘、umami 统计、SEO） | ⏳ 待开始 |
 | M5 | 打磨与发布（性能优化、恢复演练、首发文章） | ⏳ 待开始 |
 
-> 主题 `z-blog-sg` 已能安装并渲染全部路由（配色 tokens、自托管字体、统一骨架、10 个模板）。Divergence Meter、CRT 动效与双主题切换属于 M2。
+> 主题 `z-blog-sg` 已能安装并渲染全部路由，M2 的交互层也已就位：世界线 α/β 双主题切换、Divergence Meter 辉光管（默认 `1.048596`，可切真实文章数）、CRT 扫描线/粒子/鼠标辉光/打字机、以及一键「简洁模式」。
+>
+> 动效默认开启，但遵循 `prefers-reduced-motion`；所有开关记在 localStorage（`sg-worldline` / `sg-motion`），Console 里另有五项默认值设置。浏览器端的视觉效果仍需人工走查确认（见 [theme/README.md](theme/README.md) 的走查清单）。
 
 ## 技术栈
 
@@ -51,19 +53,23 @@
 │   ├── verify/boot-test.sh                  #   真实起站 + 容器重建后数据留存验证
 │   ├── .env.example                         #   环境变量模板（真实 .env 不入库）
 │   └── README.md                            #   部署与运维手册
-├── theme/                                   # ★ M1 交付：Steins;Gate 主题 z-blog-sg
+├── theme/                                   # ★ M1/M2 交付：Steins;Gate 主题 z-blog-sg
 │   ├── src/                                 #   源码：tokens/main.css、partials/layout.html、10 个路由模板
-│   ├── verify/check-theme.sh                #   主题静态校验（tokens / 字体 / 布局 / 模板 / 说明）
-│   ├── verify/preview-test.sh               #   本地预览验证：起站 → 初始化 → 装主题 → 路由断言
+│   ├── src/js/                              #   M2 交互层：worldline / motion / divergence / typewriter / particles
+│   ├── verify/check-theme.sh                #   主题静态校验（tokens / 字体 / 布局 / 模板 / 组件 / 说明）
+│   ├── verify/preview-test.sh               #   本地预览验证：起站 → 初始化 → 装主题 → 路由与组件断言
+│   ├── verify/unit-logic.mjs                #   交互层纯逻辑单测（世界线/简洁模式/辉光管格式化）
 │   ├── theme.yaml                           #   主题元信息（名称、版本、requires）
-│   └── README.md                            #   主题开发说明 + 人工走查清单
+│   └── README.md                            #   主题开发说明 + 组件与开关 + 人工走查清单
 ├── .github/workflows/ci.yml                 # 推送校验：部署底座静态校验 + 主题构建校验
 ├── specs/                                   # 已发布的规格基线
 │   ├── deployment-baseline/spec.md          #   M0：5 条 Requirement / 9 个 Scenario
-│   └── theme-foundation/spec.md             #   M1：主题基础能力
+│   ├── theme-foundation/spec.md             #   M1：主题基础能力
+│   └── theme-interaction/spec.md             #   M2：交互组件与开关
 └── changes/                                 # 变更档案（提案 / 任务 / 设计 / 审查报告）
     ├── add-halo-deploy-base/                #   M0
-    └── add-theme-skeleton/                  #   M1
+    ├── add-theme-skeleton/                  #   M1
+    └── add-core-components/                 #   M2
 ```
 
 ## 本地快速开始
@@ -92,11 +98,14 @@ docker compose -f deploy/docker-compose.yml down           # 停止（数据保�
 装上 Steins;Gate 主题：
 
 ```bash
-# 1. 构建主题包（产出 theme/dist/z-blog-sg-1.0.0.zip）
+# 1. 构建主题包（产出 theme/dist/z-blog-sg-1.1.0.zip）
 (cd theme && pnpm install && pnpm build)
 
-# 2. 一条命令完成 初始化 → 安装 → 激活 → 路由断言，并保留站点
+# 2. 一条命令完成 起站 → 初始化 → 安装 → 激活 → 路由与组件断言，并保留站点
 bash theme/verify/preview-test.sh --keep
+
+# 实例已存在但想验证一个全新安装（密码未知、需要干净数据卷）
+bash theme/verify/preview-test.sh --reset --keep
 ```
 
 也可以把 zip 传到 Console → 主题 → 安装，再启用。主题开发约定见 **[theme/README.md](theme/README.md)**。
@@ -117,7 +126,12 @@ docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml up
 bash deploy/verify/static-check.sh --all    # 静态校验：编排渲染、变量注入、手册章节、LF 换行符
 bash deploy/verify/boot-test.sh             # 真实起站：健康接口轮询 + 容器重建后数据留存
 bash deploy/backup/backup.sh --dry-run      # 备份脚本演练（不加 --dry-run 会真的产出转储）
+bash theme/verify/check-theme.sh --all      # 主题静态校验：tokens / 字体 / 布局 / 模板 / 组件 / 说明
+node theme/verify/unit-logic.mjs            # 交互层纯逻辑单测
+bash theme/verify/preview-test.sh --keep    # 端到端：起站 → 初始化 → 装主题 → 路由与组件断言
 ```
+
+> 交互层有两处只靠静态检查会漏掉的真实陷阱，已固化成断言：Thymeleaf 里 `__` 会被当作表达式预处理分隔符（类名、文本里出现就编译报错），以及 JS 里写死的类名必须与样式表一致（`check-theme.sh --components` 会交叉核对）。
 
 ## 文档
 
@@ -127,11 +141,13 @@ bash deploy/backup/backup.sh --dry-run      # 备份脚本演练（不加 --dry-
 | [技术方案](命运石之门二次元博客-技术方案.md) | Halo vs Hugo 选型对比、配色 tokens、SG 元素映射、部署架构 |
 | [CONTEXT.md](CONTEXT.md) | 领域术语表：世界线、Divergence Meter、D-Mail、RINE、未来道具研究所… |
 | [deploy/README.md](deploy/README.md) | 部署与运维手册（本地 + 线上 + 备份恢复 + 排障） |
-| [theme/README.md](theme/README.md) | 主题开发说明：构建、打包、装到本地 Halo、新增模板/token、人工走查清单 |
+| [theme/README.md](theme/README.md) | 主题开发说明：构建、打包、装到本地 Halo、新增模板/token、组件与开关、人工走查清单 |
 | [specs/deployment-baseline/spec.md](specs/deployment-baseline/spec.md) | M0 已发布的规格基线 |
 | [specs/theme-foundation/spec.md](specs/theme-foundation/spec.md) | M1 已发布的规格基线 |
+| [specs/theme-interaction/spec.md](specs/theme-interaction/spec.md) | M2 已发布的规格基线 |
 | [changes/add-halo-deploy-base](changes/add-halo-deploy-base) | M0 变更档案：提案、任务、设计决策、代码审查报告 |
 | [changes/add-theme-skeleton](changes/add-theme-skeleton) | M1 变更档案：提案、任务、设计决策、代码审查报告 |
+| [changes/add-core-components](changes/add-core-components) | M2 变更档案：提案、任务、设计决策、代码审查报告 |
 
 ## 设计约定
 
@@ -159,9 +175,10 @@ bash deploy/backup/backup.sh --dry-run      # 备份脚本演练（不加 --dry-
 - **恢复演练尚未真实执行过一次**：转储导入验证被本机命令安全策略拦下，步骤已写入运维手册，待人工执行一次。
 - **`registry.fit2cloud.com` 拉取可能停滞**：Docker Hub 上的 `halohub/halo:2.27.0` 与其同源同摘要，可通过 `.env` 里的 `HALO_IMAGE` 切换。
 - **域名、服务器、ICP 备案与线上真实部署尚未开始**（属于 M0 的范围外事项）。
-- **主题的视觉表现未做浏览器自动化**：断点、吸顶、焦点环、对比度按 [theme/README.md](theme/README.md) 的走查清单人工确认。
+- **主题的视觉表现未做浏览器自动化**：断点、吸顶、焦点环、对比度、以及 M2 的动效观感（扫描线、粒子、辉光、打字机、辉光管滚动）按 [theme/README.md](theme/README.md) 的走查清单人工确认。端到端脚本断言的是服务端响应与静态资源，抓不到 JS 改写后的 DOM。
 - **CI 未在 GitHub Actions 上实跑过**：本地用与 CI 相同的命令验证通过（`static-check.sh --all`、`check-theme.sh --all`）。
-- **主题只在空站点上验证过**：有内容时的分页、置顶、分类层级等形态待 M2/M3 造数据验证。
+- **主题只在空站点上验证过**：有内容时的分页、置顶、分类层级等形态待造数据验证（M3 铺开页面时会覆盖）。
+- **两个 `data-*` 属性语义上有小瑕疵**：`.sg-scanline` / `.sg-particles` 的 `data-enabled` 同时承载服务端设置与客户端开关，简洁模式关闭时属性存在但值为 `false`；样式已用 `:not([data-enabled="false"])` 兼容，但读 DOM 时容易误解。
 
 ## 版权
 
@@ -170,4 +187,4 @@ bash deploy/backup/backup.sh --dry-run      # 备份脚本演练（不加 --dry-
 
 ---
 
-本仓库的变更使用 [spec-superflow](https://github.com/MageByte-Zero/spec-superflow) 的 planned 流程推进：提案 → 任务 → 设计 → 实现 → 审查 → 归档，全过程留痕在 `changes/` 与 `specs/` 中。已完成 M0（`add-halo-deploy-base`）与 M1（`add-theme-skeleton`）。
+本仓库的变更使用 [spec-superflow](https://github.com/MageByte-Zero/spec-superflow) 的 planned 流程推进：提案 → 任务 → 设计 → 实现 → 审查 → 归档，全过程留痕在 `changes/` 与 `specs/` 中。已完成 M0（`add-halo-deploy-base`）、M1（`add-theme-skeleton`）与 M2（`add-core-components`）。
