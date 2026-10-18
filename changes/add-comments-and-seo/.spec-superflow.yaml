@@ -2,10 +2,10 @@
 # Progress and legacy approvals. Recover missing evidence; never infer approval from artifact existence.
 
 # === Core state ===
-state: executing
+state: closing
 workflow: full
 workflow_variant: planned
-completion_outcome: null
+completion_outcome: verified
 completion_reason: null
 revision: null
 
@@ -18,13 +18,13 @@ execution_mode: null
 execution_plan_hash: null
 execution_plan_revision: null
 batches_completed: 0
-test_result: null
+test_result: pass: bash deploy/verify/static-check.sh --all && bash theme/verify/check-theme.sh --all
 spec_merged: true
 spec_publication_receipt: eyJ2ZXJzaW9uIjoxLCJzb3VyY2VfaGFzaCI6InNoYTI1NjpiNzU1MWM0NjUwYmFiNjA5ODNiMjkzNDgwN2EyZTU3MWVhY2M0NGI5YmM5Njg1OTRmYjJhYzUyYzQ0OWFlNWU3IiwiYmFzZWxpbmVfYmVmb3JlX2hhc2giOiJzaGEyNTY6NmVjNDJkNDEwZDRmMjI3MmRiZjRlYzUzN2FiMWQ4Njc2NDk1Y2MwMzRmMTI5YzUwYWU5Y2I5NjBkYzYzN2I0OCIsImJhc2VsaW5lX2FmdGVyX2hhc2giOiJzaGEyNTY6ODIyOGI2MmYyYWNhNTYzYWMxNzc3MThiYjYzZjg2NTA0NTQ4YTBkZGRmMTAzZmVkMGU4ZDg2MDNlODVkZDQyNCIsImNhcGFiaWxpdGllcyI6WyJpbnRlZ3JhdGlvbnMiXX0
 
 # === Metadata ===
 change_name: add-comments-and-seo
-last_transition: 2026-10-18T13:02:47.213Z
+last_transition: 2026-10-18T13:05:18.579Z
 last_transition_from: null
 last_transition_to: null
 

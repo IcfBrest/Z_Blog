@@ -1,7 +1,7 @@
 # 代码审查：M4a 评论接入与 SEO 元信息
 
 - 变更：`add-comments-and-seo`
-- 范围：`03b5917d5964d4bdc537b686782f81c8ad49adf2`..`a9f7880048c3e52571735e17ca218d807f4888f4`（代码提交 `b3ef608` + 规格发布与回执提交；38 files changed）
+- 范围：`03b5917d5964d4bdc537b686782f81c8ad49adf2`..`b9774f3638ef7a7ce335193672aeefc54f098408`（实现提交 `b3ef608`、规格发布 `a9f7880`、回执提交 `b9774f3`）
 - 策略：Native `final`（计划 `reviews[0].review_policy = final`），由执行者本地审查整段 diff，未派审查子代理
 - 计划版本：revision 2，artifacts hash `sha256:1984bff18a738048aa751b9be54adb012cb134b5b8abd19f9757a81fdb64f4ad`
 - 判定：**pass**
