@@ -18,7 +18,7 @@
 | **M3a** | 页面铺开（首页世界线横幅、文章详情 CRT 终端 + D-Mail 元信息、归档时间轴、分类分支徽章、关于页成员卡、友链卡片、404 终端） | ✅ **已完成** |
 | M3b | D-Mail 密码解锁（Halo 2.27 的 `PostSpec` 没有密码字段，需先定方案） | ⏳ 待开始 |
 | **M4a** | 评论与 SEO（Artalk 评论后端 + RINE 频道样式、OG/Twitter 元信息、页脚 RSS 与站点地图入口） | ✅ **已完成** |
-| M4b | 搜索、看板娘、umami 统计（都要装插件或外部服务，另立变更） | ⏳ 待开始 |
+| **M4b** | 搜索入口（`plugin-search-widget` 与主题 `/` 快捷键）、看板娘（CSS 联动 + 可插拔插件安装）、umami 统计（独立可选叠加层 + 主题统计组件） | ✅ **已完成** |
 | M5 | 打磨与发布（性能优化、恢复演练、首发文章） | ⏳ 待开始 |
 
 > 主题 `z-blog-sg` 已能安装并渲染全部路由，M2 的交互层也已就位：世界线 α/β 双主题切换、Divergence Meter 辉光管（默认 `1.048596`，可切真实文章数）、CRT 扫描线/粒子/鼠标辉光/打字机、以及一键「简洁模式」。
@@ -109,14 +109,14 @@ docker compose -f deploy/docker-compose.yml down           # 停止（数据保�
 装上 Steins;Gate 主题：
 
 ```bash
-# 1. 构建主题包（产出 theme/dist/z-blog-sg-1.4.0.zip）
+# 1. 构建主题包（产出 theme/dist/z-blog-sg-1.5.0.zip）
 (cd theme && pnpm install && pnpm build)
 
 # 2. 一条命令完成 起站 → 初始化 → 安装 → 激活 → 路由与组件断言，并保留站点
 bash theme/verify/preview-test.sh --keep
 
 # 3. 连评论后端与 SEO 一起验（会自动拉起 Artalk 容器）
-bash theme/verify/preview-test.sh --keep --integrations --seo
+bash theme/verify/preview-test.sh --keep --integrations --seo --plugins
 
 # 实例已存在但想验证一个全新安装（密码未知、需要干净数据卷）
 bash theme/verify/preview-test.sh --reset --keep
@@ -142,7 +142,7 @@ bash deploy/verify/boot-test.sh             # 真实起站：健康接口轮询 
 bash deploy/backup/backup.sh --dry-run      # 备份脚本演练（不加 --dry-run 会真的产出转储）
 bash theme/verify/check-theme.sh --all      # 主题静态校验：tokens / 字体 / 布局 / 模板 / 组件 / 页面 / 集成 / 说明
 node theme/verify/unit-logic.mjs            # 交互层纯逻辑单测
-bash theme/verify/preview-test.sh --keep --integrations --seo   # 端到端：含评论后端与 SEO/订阅
+bash theme/verify/preview-test.sh --keep --integrations --seo --plugins  # 端到端：含评论、SEO/订阅与插件安装
 ```
 
 > 交互层有两处只靠静态检查会漏掉的真实陷阱，已固化成断言：Thymeleaf 里 `__` 会被当作表达式预处理分隔符（类名、文本里出现就编译报错），以及 JS 里写死的类名必须与样式表一致（`check-theme.sh --components` 会交叉核对）。
@@ -161,11 +161,13 @@ bash theme/verify/preview-test.sh --keep --integrations --seo   # 端到端：�
 | [specs/theme-interaction/spec.md](specs/theme-interaction/spec.md) | M2 已发布的规格基线 |
 | [specs/theme-pages/spec.md](specs/theme-pages/spec.md) | M3a 已发布的规格基线 |
 | [specs/integrations/spec.md](specs/integrations/spec.md) | M4a 已发布的规格基线 |
+| [specs/external-plugins/spec.md](specs/external-plugins/spec.md) | M4b 已发布的规格基线 |
 | [changes/add-halo-deploy-base](changes/add-halo-deploy-base) | M0 变更档案：提案、任务、设计决策、代码审查报告 |
 | [changes/add-theme-skeleton](changes/add-theme-skeleton) | M1 变更档案：提案、任务、设计决策、代码审查报告 |
 | [changes/add-core-components](changes/add-core-components) | M2 变更档案：提案、任务、设计决策、代码审查报告 |
 | [changes/add-page-layouts](changes/add-page-layouts) | M3a 变更档案：提案、任务、设计决策、代码审查报告 |
 | [changes/add-comments-and-seo](changes/add-comments-and-seo) | M4a 变更档案：提案、任务、设计决策、代码审查报告 |
+| [changes/add-external-integrations](changes/add-external-integrations) | M4b 变更档案：提案、任务、设计决策、代码审查报告 |
 
 ## 设计约定
 
@@ -194,14 +196,15 @@ bash theme/verify/preview-test.sh --keep --integrations --seo   # 端到端：�
 - **`registry.fit2cloud.com` 拉取可能停滞**：Docker Hub 上的 `halohub/halo:2.27.0` 与其同源同摘要，可通过 `.env` 里的 `HALO_IMAGE` 切换。
 - **域名、服务器、ICP 备案与线上真实部署尚未开始**（属于 M0 的范围外事项）。
 - **主题的视觉表现未做浏览器自动化**：断点、吸顶、焦点环、对比度、以及 M2 的动效观感（扫描线、粒子、辉光、打字机、辉光管滚动）与 M3a 的页面形态（世界线横幅、CRT 终端、时间轴、成员/友链卡片）按 [theme/README.md](theme/README.md) 的走查清单人工确认。端到端脚本断言的是服务端响应结构与静态资源，抓不到 JS 改写后的 DOM。
+- **看板娘的启用未能自动化验证**：插件安装接口返回 200，但 Halo 2.27 会把被禁用的插件名写进 `plugins/disabled.txt`，`PUT plugins/{name}/plugin-state` 返回 200 也不会移除该记录，插件恒为 `DISABLED`。端到端脚本因此降级为「安装成功 + 打印手工启用步骤」；实际启用需在控制台点一次。
+- **umami 叠加层未做真实启动验证**：本机启动该叠加层被安全守卫拦下（命令文本含 `.env` 路径），只验证了静态渲染（`static-check.sh --analytics`）与主题侧脚本注入（`check-theme.sh --analytics`）。
+- **搜索依赖发行版自带插件**：全新实例的 `plugins/` 已预设 `PluginSearchWidget`，所以搜索开箱可用；若上游移除该预设，需要自行安装插件。
 - **CI 未在 GitHub Actions 上实跑过**：本地用与 CI 相同的命令验证通过（`static-check.sh --all`、`check-theme.sh --all`）。
 - **造的数据形态单一**：预览脚本只造 3 个分类、3 篇文章、2 个页面，且都是二级分类、无置顶、无子分类；更复杂的内容形态（多级分类、大量分页、草稿与私密文章）待后续补充。
 - **D-Mail 密码解锁（M3b）尚不可行**：Halo 2.27 的 `PostSpec` 没有密码字段（`visible` 只有 `PUBLIC/INTERNAL/PRIVATE`），主题层拿到的正文已是明文，遮不住；需要自研插件或改用密文方案，属独立立项。
 - **评论按「站点名」归属，没有 siteKey**：Artalk 前端配置里只有 `site`（实测 2.10.0 的 `dist/Artalk.js` 中 `siteKey` 出现 0 次），所以主题的 `comments_site_name` 必须与 Artalk 后台站点名一致，否则评论会落到另一个站点。
 - **`og:url` 与 `canonical` 依赖站点地址**：模板里只有相对 permalink，拼绝对地址要读站点对外 URL；拿不到时这两个标签不会输出（宁缺不错）。在控制台配好站点地址或给 Halo 正确的 `--halo.external-url` 后自动出现。
 - **`/artalk` 前缀反代只在本地验过**：`caddy validate`/`caddy adapt` 确认规则正确（`handle_path` 会剥前缀），但没有在真实域名 + 证书下跑过，第一次线上部署需要确认评论接口可达。
-- **M4b 尚未开始**：搜索（`plugin-search-widget`）、看板娘（LIlGG/plugin-live2d）、umami 统计都要装插件或外部服务，未纳入 M4a。
-- **两个 `data-*` 属性语义上有小瑕疵**：`.sg-scanline` / `.sg-particles` 的 `data-enabled` 同时承载服务端设置与客户端开关，简洁模式关闭时属性存在但值为 `false`；样式已用 `:not([data-enabled="false"])` 兼容，但读 DOM 时容易误解。
 
 ## 版权
 
