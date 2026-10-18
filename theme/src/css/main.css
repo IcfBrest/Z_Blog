@@ -8,6 +8,7 @@
 @import "./tokens.css";
 @import "./fonts.css";
 @import "./pages.css";
+@import "./comments.css";
 
 /* ── 基础重置 ─────────────────────────────────────────── */
 
@@ -452,6 +453,30 @@ img {
 
 .sg-footer__meta a {
   color: var(--text-dim);
+}
+
+.sg-footer__feeds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0 0 0.375rem;
+}
+
+.sg-footer__feed {
+  color: var(--text-dim);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--border);
+  transition: color var(--motion-fast) var(--motion-ease);
+}
+
+.sg-footer__feed:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.sg-footer__feed:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 /* ── 错误页 ───────────────────────────────────────────── */

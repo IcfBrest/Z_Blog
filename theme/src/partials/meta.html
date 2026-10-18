@@ -1,0 +1,31 @@
+<!-- SEO / 社交分享元信息。10 个路由模板的 <head> 都 include 它。 -->
+<th:block
+  th:with="
+    sgIsPost=${post != null},
+    sgIsPage=${singlePage != null},
+    sgTitle=${sgIsPost ? post.spec.title : (sgIsPage ? singlePage.spec.title : site.title)},
+    sgDesc=${sgIsPost and post.status != null ? post.status.excerpt : (sgIsPage and singlePage.status != null ? singlePage.status.excerpt : site.subtitle)},
+    sgPermalink=${sgIsPost ? post.status.permalink : (sgIsPage ? singlePage.status.permalink : null)},
+    sgOrigin=${site.url},
+    sgSummary=${#strings.isEmpty(sgDesc) ? site.subtitle : sgDesc}"
+>
+  <meta name="description" th:content="${sgSummary}" />
+  <meta property="og:site_name" th:content="${site.title}" />
+  <meta property="og:type" th:content="${sgIsPost ? 'article' : 'website'}" />
+  <meta property="og:title" th:content="${sgTitle}" />
+  <meta property="og:description" th:content="${sgSummary}" />
+  <meta
+    property="og:url"
+    th:if="${sgPermalink != null and sgOrigin != null and !#strings.isEmpty(sgOrigin)}"
+    th:content="${sgOrigin + sgPermalink}"
+  />
+  <link
+    rel="canonical"
+    th:if="${sgPermalink != null and sgOrigin != null and !#strings.isEmpty(sgOrigin)}"
+    th:href="${sgOrigin + sgPermalink}"
+  />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" th:content="${sgTitle}" />
+  <meta name="twitter:description" th:content="${sgSummary}" />
+  <link rel="alternate" type="application/rss+xml" th:href="'/rss.xml'" th:title="${site.title}" />
+</th:block>

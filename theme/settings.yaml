@@ -67,3 +67,23 @@ spec:
           label: 鼠标跟随辉光
           value: true
           help: "触屏设备与窄屏自动禁用，无需手动关闭。"
+    - group: integration
+      label: 集成
+      formSchema:
+        - $formkit: checkbox
+          name: comments_enabled
+          label: 启用评论
+          value: true
+          help: "关闭后文章与页面都不再渲染评论区，访客看不到也发不了评论。"
+        - $formkit: text
+          name: comments_server
+          label: 评论服务地址
+          value: ""
+          placeholder: "留空表示 /artalk"
+          help: "线上留空即可（同域名由 Caddy 把 /artalk 转发给评论后端）；本地没有 Caddy，填 http://localhost:23366。"
+        - $formkit: text
+          name: comments_site_name
+          label: 评论站点名
+          value: ""
+          placeholder: "留空用站点标题"
+          help: "必须与 Artalk 后台里站点的名称一致，否则评论会落到「默认站点」。创建站点的方法见 deploy/README.md 的「评论（Artalk）」一节。"

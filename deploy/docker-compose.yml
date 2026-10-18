@@ -64,6 +64,35 @@ services:
     networks:
       - halo_network
 
+  artalk:
+    # 评论后端（M4a）。SQLite 落在绑定挂载里，随 compose 一起起停。
+    # 关键约束：宿主机只绑回环地址，线上由 Caddy 反代 /artalk/*；
+    # 本地预览时主题的 artalk_server 要显式写成 http://localhost:23366。
+    image: ${ARTALK_IMAGE:-artalk/artalk-go:2.10.0}
+    restart: unless-stopped
+    environment:
+      ATK_LOCALE: zh-CN
+      # 默认站点名与站点 URL：评论按 URL 归属站点，必须与访客访问的地址一致
+      ATK_SITE_DEFAULT: ${ARTALK_SITE_NAME:-世界线观测站}
+      ATK_SITE_URL: ${HALO_EXTERNAL_URL:-http://localhost:8090}
+      ATK_DB_TYPE: sqlite
+      ATK_DB_FILE: /data/artalk.db
+    ports:
+      # 同样只绑回环：线上不要让访客绕过 Caddy 直接打到评论后端
+      - "127.0.0.1:${ARTALK_SERVER_PORT:-23366}:23366"
+    volumes:
+      # 整个目录挂进去：Artalk 首次启动会生成 artalk.yml 与 artalk.db
+      - ./data/artalk:/data
+    healthcheck:
+      # 镜像里只有 wget（没有 curl），/api/v2/conf 是公开的只读接口
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:23366/api/v2/conf"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - halo_network
+
 networks:
   halo_network:
     driver: bridge

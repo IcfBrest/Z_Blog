@@ -5,8 +5,10 @@
 #   bash theme/verify/preview-test.sh --keep     # 验证后保持容器运行
 #   bash theme/verify/preview-test.sh --purge    # 验证后停站并删除数据卷与 deploy/data
 #   bash theme/verify/preview-test.sh --reset    # 验证前先重建实例（同名同版本改模板后必须这样跑）
+#   bash theme/verify/preview-test.sh --integrations # 追加外部集成断言（Artalk 评论后端 + 评论挂载点）
+#   bash theme/verify/preview-test.sh --seo     # 追加 SEO 元信息与 /rss.xml、/sitemap.xml 订阅出口断言
 #
-# 环境变量：BASE_URL / HALO_ADMIN_USER / HALO_ADMIN_PASS / HALO_ADMIN_EMAIL / HALO_SITE_TITLE
+# 环境变量：BASE_URL / HALO_ADMIN_USER / HALO_ADMIN_PASS / HALO_ADMIN_EMAIL / HALO_SITE_TITLE / ARTALK_URL
 #
 # 退出码：0 通过 / 1 有失败 / 2 用法错误 / 3 前置条件缺失
 #
@@ -32,9 +34,12 @@ SITE_TITLE="${HALO_SITE_TITLE:-世界线观测站}"
 KEEP=0
 PURGE=0
 RESET=0
+INTEGRATIONS=0
+SEO=0
+ARTALK_URL="${ARTALK_URL:-http://127.0.0.1:23366}"
 
 usage() {
-  sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 for arg in "$@"; do
@@ -42,6 +47,8 @@ for arg in "$@"; do
     --keep) KEEP=1 ;;
     --purge) PURGE=1 ;;
     --reset) RESET=1 ;;
+    --integrations) INTEGRATIONS=1 ;;
+    --seo) SEO=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "未知参数：$arg" >&2; usage >&2; exit 2 ;;
   esac
@@ -330,7 +337,7 @@ mk_page() {
     return 0
   fi
   cat > "$TMP/page.json" <<JSON
-{"page":{"apiVersion":"content.halo.run/v1alpha1","kind":"SinglePage","metadata":{"name":"$name","labels":{},"annotations":{}},"spec":{"title":"$title","slug":"$slug","template":"page","cover":"","deleted":false,"publish":true,"publishTime":"2026-01-05T08:00:00Z","pinned":false,"allowComment":false,"visible":"PUBLIC","priority":0,"excerpt":{"autoGenerate":true,"raw":""},"htmlMetas":[]}},"content":{"raw":"$raw","content":"$raw","rawType":"markdown"},"contentPatch":""}
+{"page":{"apiVersion":"content.halo.run/v1alpha1","kind":"SinglePage","metadata":{"name":"$name","labels":{},"annotations":{}},"spec":{"title":"$title","slug":"$slug","template":"page","cover":"","deleted":false,"publish":true,"publishTime":"2026-01-05T08:00:00Z","pinned":false,"allowComment":true,"visible":"PUBLIC","priority":0,"excerpt":{"autoGenerate":true,"raw":""},"htmlMetas":[]}},"content":{"raw":"$raw","content":"$raw","rawType":"markdown"},"contentPatch":""}
 JSON
   code="$(api_post "/apis/api.console.halo.run/v1alpha1/singlepages" "$TMP/page.json")"
   case "$code" in
@@ -558,6 +565,67 @@ if [ "$nodes" -ge 3 ]; then
   ok "首页世界线横幅渲染出 $nodes 个分类节点"
 else
   bad "首页世界线横幅节点过少（$nodes < 3），分类未进入横幅"
+fi
+
+# ── 外部集成（Artalk 评论 / SEO）─────────────────────────
+if [ "$INTEGRATIONS" -eq 1 ]; then
+  step "5d/6 外部集成（Artalk 评论）"
+
+  # 评论容器不在 1/6 的起站范围内（基础站不需要它），这里单独拉起并等健康
+  compose up -d artalk >/dev/null 2>&1 || true
+  artalk_ready=0
+  for _ in $(seq 1 40); do
+    if curl -sf -o /dev/null "$ARTALK_URL/api/v2/conf" 2>/dev/null; then
+      artalk_ready=1
+      break
+    fi
+    sleep 2
+  done
+  if [ "$artalk_ready" -eq 1 ]; then
+    ok "评论后端已就绪：$ARTALK_URL"
+  else
+    bad "评论后端在 80s 内未就绪：$ARTALK_URL"
+  fi
+
+  # 前端是按 <server>/dist/Artalk.js 与 .css 去取产物的，这两个必须能取到
+  for p in /api/v2/conf /dist/Artalk.js /dist/Artalk.css; do
+    code="$(curl -s -o /dev/null -w '%{http_code}' "$ARTALK_URL$p" || true)"
+    if [ "$code" = "200" ]; then
+      ok "评论后端资源可访问：$p"
+    else
+      bad "评论后端资源返回 HTTP $code：$p"
+    fi
+  done
+
+  # 主题侧：文章页与独立页面都要挂上评论容器，并把服务地址/站点名直出到 data-*
+  detail 200 "/archives/tech-1" "文章页挂载评论区（服务地址与站点名直出）" \
+    'id="sg-comments"' 'sg-comments__mount' 'data-server=' 'data-site='
+  detail 200 "/about" "独立页面同样挂载评论区" 'id="sg-comments"'
+
+  if grep -qF 'data-server="/artalk"' "$BODY"; then
+    ok "未配置评论服务地址时回退到同源 /artalk"
+  else
+    bad "评论挂载点的 data-server 不是回退值 /artalk（检查 integration 分组）"
+  fi
+fi
+
+# ── 5e/6 SEO 元信息与订阅出口 ────────────────────────────
+if [ "$SEO" -eq 1 ]; then
+  step "5e/6 SEO 元信息与订阅出口"
+
+  detail 200 "/archives/tech-1" "文章页输出 OG 与 Twitter 卡片元信息" \
+    'property="og:title"' 'property="og:description"' 'name="twitter:card"' 'content="article"'
+  detail 200 "/" "首页输出站点级 SEO 元信息" \
+    'property="og:site_name"' 'name="description"' 'rel="alternate"'
+
+  for path in /rss.xml /sitemap.xml; do
+    code="$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL$path")"
+    if [ "$code" = "200" ]; then
+      ok "订阅出口可用：$path"
+    else
+      bad "订阅出口不可用：$path（HTTP $code）"
+    fi
+  done
 fi
 
 # ── 清理 ─────────────────────────────────────────────────

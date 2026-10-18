@@ -140,6 +140,13 @@
           <span th:text="${site.title}">世界线观测站</span>
           <span> · 世界线收束于此</span>
         </p>
+        <!-- 订阅入口：两个地址都是 Halo 内置插件出的稳定路径，不需要额外配置 -->
+        <p class="sg-footer__feeds">
+          <a class="sg-footer__feed" href="/rss.xml" rel="alternate" type="application/rss+xml">
+            RSS 订阅
+          </a>
+          <a class="sg-footer__feed" href="/sitemap.xml">站点地图</a>
+        </p>
         <halo:footer />
       </div>
     </footer>

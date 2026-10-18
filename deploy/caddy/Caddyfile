@@ -12,8 +12,19 @@
 	# 上传附件多为已压缩格式（jpg/png/zip），压缩主要作用于 HTML/CSS/JS
 	encode gzip
 
-	# 与 Halo 处于同一 compose 网络，直接使用服务名与容器内端口。
-	# Caddy 默认会补 X-Forwarded-For / X-Forwarded-Proto / X-Forwarded-Host，
-	# Halo 据此还原访客真实 IP 与请求协议。
-	reverse_proxy halo:8090
+	# route 保持书写顺序（顶层直接用 handle_path + reverse_proxy 会受
+	# Caddy 的指令排序影响，万一顺序反了，/artalk 会先被 Halo 接走）。
+	route {
+		# 评论后端：剥掉 /artalk 前缀再转发。
+		# Artalk 的前端资源与后台 SPA 都用相对路径（./assets/...、./sidebar/），
+		# 因此剥离前缀后 /artalk/dist/Artalk.js 与 /artalk/sidebar/ 都能命中。
+		handle_path /artalk/* {
+			reverse_proxy artalk:23366
+		}
+
+		# 与 Halo 处于同一 compose 网络，直接使用服务名与容器内端口。
+		# Caddy 默认会补 X-Forwarded-For / X-Forwarded-Proto / X-Forwarded-Host，
+		# Halo 据此还原访客真实 IP 与请求协议。
+		reverse_proxy halo:8090
+	}
 }

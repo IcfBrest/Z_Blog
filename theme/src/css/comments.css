@@ -1,0 +1,131 @@
+/* ── 评论区：RINE 频道 ────────────────────────────────────
+ *
+ * Artalk 自己的样式由它运行时注入 dist/Artalk.css（加载顺序在本文件之后），
+ * 所以这里的每条覆盖都写成 .sg-comments .atk-xxx（0,2,0），靠选择器权重取胜，
+ * 不依赖加载顺序，也不用 !important。
+ *
+ * 只用语义变量取色，跟随 α/β 世界线与 token 调整。
+ */
+
+.sg-comments {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.sg-comments__mount {
+  min-height: 4rem;
+}
+
+/* 频道名：当作 RINE 的会话标题 */
+.sg-comments__mount::before {
+  content: "RINE 频道";
+  display: block;
+  margin-bottom: 0.75rem;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sg-comments__hint,
+.sg-comments__off {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+/* ── Artalk 外观覆盖 ───────────────────────────────────── */
+
+.sg-comments .atk-comment-wrap {
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.sg-comments .atk-comment-wrap:hover {
+  border-color: var(--accent-dim);
+}
+
+.sg-comments .atk-comment-children {
+  margin-left: 0.75rem;
+  padding-left: 0.85rem;
+  border-left: 1px solid var(--border);
+}
+
+.sg-comments .atk-list {
+  gap: 0.9rem;
+}
+
+.sg-comments .atk-avatar {
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+
+.sg-comments .atk-nick,
+.sg-comments .atk-badge {
+  color: var(--accent);
+  font-family: var(--font-display);
+}
+
+.sg-comments .atk-content,
+.sg-comments .atk-textarea,
+.sg-comments .atk-actions {
+  color: var(--text);
+}
+
+.sg-comments .atk-textarea {
+  padding: 0.6rem 0.75rem;
+  color: var(--text);
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.sg-comments .atk-textarea:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.sg-comments .atk-btn,
+.sg-comments .atk-send-btn {
+  font-family: var(--font-display);
+  color: var(--bg-deep);
+  background: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.sg-comments .atk-btn:hover,
+.sg-comments .atk-send-btn:hover {
+  background: var(--accent-dim);
+}
+
+.sg-comments .atk-dark-mode .atk-comment-wrap {
+  background: var(--bg-deep);
+}
+
+/* 评论列表为空时也别留一大片空洞 */
+.sg-comments .atk-list-no-comment {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .sg-comments {
+    margin-top: 2rem;
+  }
+
+  .sg-comments .atk-comment-children {
+    margin-left: 0.35rem;
+    padding-left: 0.5rem;
+  }
+}

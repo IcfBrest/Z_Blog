@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# 每日备份：PostgreSQL 逻辑转储 + Halo 附件打包，按保留天数清理旧产物，
-# 并预留对象存储上传钩子（默认不启用）。
+# 每日备份：PostgreSQL 逻辑转储 + 站点数据打包（Halo 附件/插件 + Artalk 评论库），
+# 按保留天数清理旧产物，并预留对象存储上传钩子（默认不启用）。
 #
 #   bash deploy/backup/backup.sh --dry-run        # 只打印将要执行的命令，不写盘、不连 Docker
 #   bash deploy/backup/backup.sh                  # 真实执行
@@ -110,12 +110,20 @@ if [ "$DRY_RUN" -eq 0 ]; then
   esac
 fi
 
-step "2/4 附件与插件打包"
-if [ -d "$DATA/halo2" ]; then
-  runsh "tar -czf \"$ATT_FILE\" -C \"$DATA\" halo2"
-  [ "$DRY_RUN" -eq 0 ] && ok "附件已打包：$ATT_FILE（$(du -h "$ATT_FILE" | cut -f1)）"
+step "2/4 站点数据打包（附件 + 评论）"
+info "会打包 $DATA/halo2（附件/插件）与 $DATA/artalk（评论 SQLite）中存在的目录"
+DATA_DIRS=""
+for d in halo2 artalk; do
+  if [ -d "$DATA/$d" ]; then
+    DATA_DIRS="$DATA_DIRS $d"
+  fi
+done
+if [ -n "$DATA_DIRS" ]; then
+  # DATA_DIRS 是白名单目录名拼出来的、不含空格，这里的展开是有意的
+  runsh "tar -czf \"$ATT_FILE\" -C \"$DATA\"$DATA_DIRS"
+  [ "$DRY_RUN" -eq 0 ] && ok "站点数据已打包：$ATT_FILE（$(du -h "$ATT_FILE" | cut -f1)）"
 else
-  warn "$DATA/halo2 不存在，跳过打包（站点尚未首次启动？）"
+  warn "$DATA 下既没有 halo2 也没有 artalk，跳过打包（站点尚未首次启动？）"
 fi
 
 step "3/4 清理超过 $KEEP_DAYS 天的旧备份"

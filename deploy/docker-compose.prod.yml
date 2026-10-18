@@ -13,6 +13,10 @@ services:
     depends_on:
       halo:
         condition: service_healthy
+      # Caddy 的 /artalk/* 反代目标是 artalk:23366，容器不存在时容器 DNS 直接解析失败，
+      # 所以要等评论后端健康再起 Caddy。
+      artalk:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
