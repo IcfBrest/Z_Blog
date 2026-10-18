@@ -2,10 +2,10 @@
 # Progress and legacy approvals. Recover missing evidence; never infer approval from artifact existence.
 
 # === Core state ===
-state: executing
+state: closing
 workflow: full
 workflow_variant: planned
-completion_outcome: null
+completion_outcome: verified
 completion_reason: null
 revision: null
 
@@ -18,13 +18,13 @@ execution_mode: null
 execution_plan_hash: null
 execution_plan_revision: null
 batches_completed: 0
-test_result: null
+test_result: pass: bash deploy/verify/static-check.sh --all && bash theme/verify/check-theme.sh --all
 spec_merged: true
 spec_publication_receipt: eyJ2ZXJzaW9uIjoxLCJzb3VyY2VfaGFzaCI6InNoYTI1Njo2YjVmYTA1MGQ2NjA3MWY2ZDAyZmY4NDFjNGU3YzIxMzBjYzEyMzVlZjJjOGNmOGIzMzlhM2YxY2JlOTU4YzE0IiwiYmFzZWxpbmVfYmVmb3JlX2hhc2giOiJzaGEyNTY6ZTYyNzNiMjZjZTI5ZmVhNDcyNjUwNGZmNGM0OTc1ODc0MGMxYTM3MGJkYWM1NDI0Y2NlNWVkNzk2MTE2NTRkNyIsImJhc2VsaW5lX2FmdGVyX2hhc2giOiJzaGEyNTY6OTBkNmE4MDExY2RkMzRkZmM0ODk4MWFlOGM2MTU5NmRlNDYyOGQ1YjkxY2I4NjA1Nzg0ZTA0MTIwMjE5MmIyOSIsImNhcGFiaWxpdGllcyI6WyJleHRlcm5hbC1wbHVnaW5zIl19
 
 # === Metadata ===
 change_name: add-external-integrations
-last_transition: 2026-10-18T15:27:35.287Z
+last_transition: 2026-10-18T15:28:17.479Z
 last_transition_from: null
 last_transition_to: null
 
