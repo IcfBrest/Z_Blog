@@ -10,6 +10,9 @@
 #   bash theme/verify/check-theme.sh --components # 只查交互组件（世界线/简洁模式/辉光管/动效）
 #   bash theme/verify/check-theme.sh --pages    # 只查页面级结构（横幅/终端/D-Mail/时间轴/分支/卡片/错误页）
 #   bash theme/verify/check-theme.sh --integrations # 只查外部集成（Artalk 评论 / SEO 元信息）
+#   bash theme/verify/check-theme.sh --search   # 只查搜索入口（PluginSearchWidget 适配）
+#   bash theme/verify/check-theme.sh --plugins  # 只查外部插件收口（看板娘收起、页脚留白）
+#   bash theme/verify/check-theme.sh --analytics # 只查访问统计（umami 脚本与设置项）
 #   bash theme/verify/check-theme.sh --docs     # 只查主题开发说明
 #
 # 退出码：0 全部通过 / 1 有失败 / 2 用法错误 / 3 缺少构建产物
@@ -34,10 +37,13 @@ DO_TEMPLATES=0
 DO_COMPONENTS=0
 DO_PAGES=0
 DO_INTEGRATIONS=0
+DO_SEARCH=0
+DO_PLUGINS=0
+DO_ANALYTICS=0
 DO_DOCS=0
 
 usage() {
-  sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 for arg in "$@"; do
@@ -49,15 +55,18 @@ for arg in "$@"; do
     --components) DO_COMPONENTS=1 ;;
     --pages) DO_PAGES=1 ;;
     --integrations) DO_INTEGRATIONS=1 ;;
+    --search) DO_SEARCH=1 ;;
+    --plugins) DO_PLUGINS=1 ;;
+    --analytics) DO_ANALYTICS=1 ;;
     --docs) DO_DOCS=1 ;;
-    --all) DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_INTEGRATIONS=1; DO_DOCS=1 ;;
+    --all) DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_INTEGRATIONS=1; DO_SEARCH=1; DO_PLUGINS=1; DO_ANALYTICS=1; DO_DOCS=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "未知参数：$arg" >&2; usage >&2; exit 2 ;;
   esac
 done
 
-if [ "$DO_TOKENS$DO_FONTS$DO_LAYOUT$DO_TEMPLATES$DO_COMPONENTS$DO_PAGES$DO_INTEGRATIONS$DO_DOCS" = "00000000" ]; then
-  DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_INTEGRATIONS=1; DO_DOCS=1
+if [ "$DO_TOKENS$DO_FONTS$DO_LAYOUT$DO_TEMPLATES$DO_COMPONENTS$DO_PAGES$DO_INTEGRATIONS$DO_SEARCH$DO_PLUGINS$DO_ANALYTICS$DO_DOCS" = "00000000000" ]; then
+  DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_INTEGRATIONS=1; DO_SEARCH=1; DO_PLUGINS=1; DO_ANALYTICS=1; DO_DOCS=1
 fi
 
 PASS=0
@@ -682,6 +691,134 @@ if [ "$DO_INTEGRATIONS" -eq 1 ]; then
   fi
 fi
 
+# ── 搜索入口（PluginSearchWidget 适配）────────────────────
+if [ "$DO_SEARCH" -eq 1 ]; then
+  # 1) 按钮只在插件可用时输出，必须带插件守卫，否则没装插件会留下一个点不动的死按钮
+  if grep -q 'data-sg-search' "$TPL/index.html" \
+    && grep -q "pluginFinder.available('PluginSearchWidget')" "$TPL/index.html"; then
+    ok "首页搜索按钮带插件守卫（pluginFinder.available）"
+  else
+    bad "首页缺少搜索按钮或插件守卫"
+  fi
+
+  # 2) 按钮来自共享骨架，其他路由应当同样带上
+  if grep -q 'data-sg-search' "$TPL/post.html"; then
+    ok "文章页同样带搜索按钮（共享骨架注入）"
+  else
+    bad "文章页缺少搜索按钮"
+  fi
+
+  # 3) 点击必须调用插件公开的全局方法，而不是自己发搜索请求
+  js_src="$ROOT/src/js/search.ts"
+  if [ -f "$js_src" ] && grep -q 'SearchWidget' "$js_src" && grep -q '\.open()' "$js_src"; then
+    ok "search.ts 调用 SearchWidget.open()"
+  else
+    bad "search.ts 未调用 SearchWidget.open()"
+  fi
+
+  # 4) 绑定逻辑必须进 bundle，否则按钮点了没反应
+  css_all="$(cat "$ASSETS"/main-*.css 2>/dev/null)"
+  js_all="$(cat "$ASSETS"/main-*.js 2>/dev/null)"
+  if printf '%s' "$js_all" | grep -q 'data-sg-search'; then
+    ok "交互 bundle 含搜索按钮绑定逻辑"
+  else
+    bad "交互 bundle 缺少搜索按钮逻辑"
+  fi
+
+  # 5) 主题化只走插件公开的 CSS 变量，不碰它的内部类名（避免随版本升级失效）
+  var_count="$(printf '%s' "$css_all" | grep -o -- '--halo-search-widget-[a-z-]*' | sort -u | wc -l | tr -d ' ')"
+  if [ "$var_count" -ge 8 ]; then
+    ok "通过 $var_count 个 --halo-search-widget-* 变量主题化搜索组件"
+  else
+    bad "--halo-search-widget-* 变量过少（$var_count < 8），搜索弹窗会保持默认外观"
+  fi
+fi
+
+# ── 外部插件收口（看板娘）─────────────────────────────────
+if [ "$DO_PLUGINS" -eq 1 ]; then
+  # 看板娘的根节点由插件在运行时创建（#live2d-widget），主题唯一的抓手是这个选择器
+  if grep -q '#live2d-widget' "$ROOT/src/css/pages.css"; then
+    ok "样式里对 #live2d-widget 有收口规则"
+  else
+    bad "缺少 #live2d-widget 规则，简洁模式关不掉看板娘"
+  fi
+
+  css_all="$(cat "$ASSETS"/main-*.css 2>/dev/null)"
+  if printf '%s' "$css_all" | grep -q 'live2d-widget'; then
+    ok "构建后的 CSS 含看板娘收口规则"
+  else
+    bad "构建后的 CSS 丢失了看板娘收口规则"
+  fi
+
+  # 必须 !important：插件给自己的容器写的是内联/高权重样式
+  if grep -qE ':root\[data-motion="?off"?\] #live2d-widget' "$ROOT/src/css/pages.css" \
+    && grep -q 'important' "$ROOT/src/css/pages.css"; then
+    ok "简洁模式下强制收起看板娘（!important）"
+  else
+    bad "简洁模式没有强制收起看板娘"
+  fi
+
+  # 看板娘固定在最左下角，页脚要给底部留出安全间距
+  if grep -q 'sg-body .sg-footer' "$ROOT/src/css/pages.css"; then
+    ok "页脚为看板娘留出底部安全间距"
+  else
+    bad "页脚缺少底部安全间距"
+  fi
+
+  # 主题不改插件内部结构，只挂样式：产物里不应出现插件自己的容器类名选择器
+  if printf '%s' "$css_all" | grep -qE '\.live2d-(canvas|stage|chat-box)'; then
+    bad "样式里出现了插件内部类名（.live2d-*），插件升级后可能失效"
+  else
+    ok "没有依赖看板娘插件的内部类名"
+  fi
+fi
+
+# ── 访问统计（umami）─────────────────────────────────────
+if [ "$DO_ANALYTICS" -eq 1 ]; then
+  # 1) 两个设置项都要有，且脚本地址必须有默认值（留空才回退，不能没有默认）
+  if grep -q 'name: umami_script_url' "$ROOT/settings.yaml" \
+    && grep -q 'name: umami_website_id' "$ROOT/settings.yaml"; then
+    ok "设置里声明了统计脚本地址与站点 ID"
+  else
+    bad "设置里缺少 umami_script_url / umami_website_id"
+  fi
+
+  if grep -q 'value: "/umami/script.js"' "$ROOT/settings.yaml"; then
+    ok "统计脚本默认走同源 /umami/script.js"
+  else
+    bad "统计脚本地址没有指向同源 /umami/script.js 的默认值"
+  fi
+
+  # 2) 统计脚本必须靠 website id 判空才输出：所有路由都带了条件，但没配 id 时不输出
+  analytics_missing=""
+  for t in $TEMPLATES; do
+    f="$TPL/$t.html"
+    [ -f "$f" ] || continue
+    # 构建后 include 已展开：条件表达式与 script 标签都应出现在产物里
+    grep -q 'umami_website_id' "$f" || analytics_missing="$analytics_missing $t:条件"
+    grep -q 'data-website-id' "$f" || analytics_missing="$analytics_missing $t:脚本"
+  done
+  if [ -z "$analytics_missing" ]; then
+    ok "全部路由模板都带受控的统计脚本"
+  else
+    bad "以下模板缺统计脚本：$analytics_missing"
+  fi
+
+  # 3) 脚本标签必须是 defer，不能阻塞首屏渲染
+  if grep -q 'defer' "$ROOT/src/partials/analytics.html"; then
+    ok "统计脚本使用 defer 加载"
+  else
+    bad "统计脚本没有 defer，会阻塞首屏"
+  fi
+
+  # 4) 不能把 umami 的绝对地址写死（否则换域名/子路径就要改模板）
+  if grep -qE 'src="https?://' "$ROOT/src/partials/analytics.html"; then
+    bad "统计脚本地址被写死成绝对 URL"
+  else
+    ok "统计脚本地址可配置，未写死绝对 URL"
+  fi
+fi
+
 # ── 主题开发说明 ──────────────────────────────────────────
 if [ "$DO_DOCS" -eq 1 ]; then
   head_ "主题开发说明"
@@ -694,7 +831,7 @@ if [ "$DO_DOCS" -eq 1 ]; then
   fi
 
   if [ -f "$README" ]; then
-    for section in "构建" "打包" "安装到本地 Halo" "新增页面模板" "新增配色 token" "页面结构" "组件与开关" "评论（Artalk）" "SEO 与订阅" "人工走查清单"; do
+    for section in "构建" "打包" "安装到本地 Halo" "新增页面模板" "新增配色 token" "页面结构" "组件与开关" "评论（Artalk）" "SEO 与订阅" "搜索" "看板娘" "访问统计（umami）" "人工走查清单"; do
       if grep -q "^#\{1,3\} .*$section" "$README"; then
         ok "说明含章节：$section"
       else

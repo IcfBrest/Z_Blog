@@ -1,0 +1,19 @@
+<!--
+  访问统计脚本（自托管 umami）。
+
+  这里刻意用条件输出而不是「永远输出一个空 id 的 script」：umami 的追踪脚本
+  拿到空 website-id 会照常上报，等于把无效数据写进后台；而且没启用统计的站点
+  会平白多一次 /umami/script.js 的 404 请求。
+-->
+<th:block th:if="${!#strings.isEmpty(theme.config.integration.umami_website_id)}">
+  <th:block
+    th:with="sgUmamiSrc=${#strings.isEmpty(theme.config.integration.umami_script_url)} ? '/umami/script.js' : theme.config.integration.umami_script_url}"
+  >
+    <!-- defer：统计不该阻塞首屏；data-website-id 由上面的 th:with 取值 -->
+    <script
+      defer
+      th:src="${sgUmamiSrc}"
+      th:attr="data-website-id=${theme.config.integration.umami_website_id}"
+    ></script>
+  </th:block>
+</th:block>

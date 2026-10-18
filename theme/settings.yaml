@@ -87,3 +87,15 @@ spec:
           value: ""
           placeholder: "留空用站点标题"
           help: "必须与 Artalk 后台里站点的名称一致，否则评论会落到「默认站点」。创建站点的方法见 deploy/README.md 的「评论（Artalk）」一节。"
+        - $formkit: text
+          name: umami_script_url
+          label: 统计脚本地址
+          value: "/umami/script.js"
+          placeholder: "/umami/script.js"
+          help: "指向自托管 umami 的追踪脚本。留空则用同源 /umami/script.js（由 Caddy 反代）。"
+        - $formkit: text
+          name: umami_website_id
+          label: 统计站点 ID
+          value: ""
+          placeholder: "例如 8b9d2c4e-1f3a-4d5b-9e7c-0a1b2c3d4e5f"
+          help: "填了才会输出统计脚本。这个 ID 在 umami 后台「设置 → 网站」里创建站点后得到，留空表示不统计。"

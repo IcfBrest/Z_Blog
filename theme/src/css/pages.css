@@ -517,3 +517,54 @@
   animation: none;
   opacity: 0.2;
 }
+
+/* ── 搜索入口（PluginSearchWidget）──────────────────────── */
+
+/*
+ * 按钮骨架复用 .sg-control，这里只把「/」提示做成终端提示符的样子。
+ * 插件未启用时模板根本不输出这个按钮，因此不需要额外的空态样式。
+ */
+.sg-search .sg-control__value {
+  color: var(--nixie);
+  font-family: var(--font-body);
+}
+
+/*
+ * 搜索组件的主题化：插件从这些 CSS 变量取值渲染弹窗、输入框与结果项。
+ * 只覆盖颜色与字体，不动它的布局，避免与插件后续版本打架。
+ */
+:root {
+  --halo-search-widget-base-bg-color: var(--bg-deep);
+  --halo-search-widget-base-font-family: var(--font-body);
+  --halo-search-widget-base-font-size: 0.95rem;
+  --halo-search-widget-base-border-radius: var(--radius);
+  --halo-search-widget-content-color: var(--text);
+  --halo-search-widget-muted-color: var(--text-dim);
+  --halo-search-widget-primary-color: var(--accent);
+  --halo-search-widget-divider-color: var(--border);
+  --halo-search-widget-hit-bg-color: var(--border);
+  --halo-search-widget-modal-bg-color: var(--bg-deep);
+  --halo-search-widget-modal-layer-color: var(--overlay);
+  --halo-search-widget-kbd-border-color: var(--border);
+  --halo-search-widget-kbd-shadow: none;
+}
+
+/* ── 看板娘（PluginLive2d）──────────────────────────────── */
+
+/*
+ * 看板娘的根节点是 #live2d-widget（由插件运行时创建）。简洁模式要求
+ * 「一键关闭全部动效」，它的呼吸与眨眼也算在内，所以直接收起。
+ */
+:root[data-motion="off"] #live2d-widget {
+  display: none !important;
+}
+
+/*
+ * 它固定在最左下角：宽屏时与居中排布的页脚各占一边，窄屏才可能压住页脚，
+ * 因此只补一点底部留白。真要关掉它，访客可以用插件自带的「退出 Live2d」工具。
+ * 选择器加了 .sg-body 提高一级权重 —— pages.css 在 main.css 之前被 @import，
+ * 同权重下会被后面定义的 .sg-footer 覆盖。
+ */
+.sg-body .sg-footer {
+  padding-bottom: 3.25rem;
+}

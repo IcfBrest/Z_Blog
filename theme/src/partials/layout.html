@@ -50,6 +50,12 @@
     </slot>
 
     <!--
+      统计脚本：只有设置里填了 website id 才输出，没启用统计的站点不会多一次 404
+      请求。脚本地址默认指向同源 /umami/（由 Caddy 反代到自托管 umami）。
+    -->
+    <include src="analytics.html" />
+
+    <!--
       用 /js/main.ts 而不是 ./js/main.ts：include 是构建期文本替换，路径会按「使用方模板」
       所在目录解析。错误页在 src/error/error.html，多一层目录，相对写法会解析成
       src/error/js/main.ts 而构建失败。/ 由 Vite 按 root（即 src/）解析，任何层级都正确。
@@ -72,6 +78,21 @@
         </a>
 
         <div class="sg-controls">
+          <!--
+            搜索入口：PluginSearchWidget 是发行版预设插件，未安装或未启用时
+            这里的整块标记都不会输出，不会留下点了没反应的死链。
+          -->
+          <button
+            class="sg-control sg-search"
+            type="button"
+            data-sg-search
+            th:if="${pluginFinder.available('PluginSearchWidget')}"
+            title="搜索站内文章（按 / 唤起）"
+            aria-label="搜索站内文章"
+          >
+            <span class="sg-control__label">搜索</span>
+            <span class="sg-control__value" aria-hidden="true">/</span>
+          </button>
           <button
             class="sg-control"
             type="button"

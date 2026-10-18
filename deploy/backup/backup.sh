@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 每日备份：PostgreSQL 逻辑转储 + 站点数据打包（Halo 附件/插件 + Artalk 评论库），
+# 每日备份：PostgreSQL 逻辑转储（Halo，可选 umami）+ 站点数据打包（Halo 附件/插件 + Artalk 评论库），
 # 按保留天数清理旧产物，并预留对象存储上传钩子（默认不启用）。
 #
 #   bash deploy/backup/backup.sh --dry-run        # 只打印将要执行的命令，不写盘、不连 Docker
@@ -8,7 +8,7 @@
 #   bash deploy/backup/backup.sh --out /srv/halo-backup
 #   bash deploy/backup/backup.sh --no-upload      # 跳过上传钩子
 #
-# 产物命名带日期前缀（halo-db-*.sql.gz / halo-attachments-*.tar.gz），保留策略
+# 产物命名带日期前缀（halo-db-*.sql.gz / umami-db-*.sql.gz / halo-attachments-*.tar.gz），保留策略
 # 依赖该前缀，请勿手工改名，否则清理逻辑会漏掉它们。
 #
 # 退出码：0 成功；1 执行失败；2 用法错误；3 前置条件不满足。
@@ -18,6 +18,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 BASE="deploy/docker-compose.yml"
+ANALYTICS="deploy/docker-compose.analytics.yml"
 ENV="deploy/.env"
 ENV_EXAMPLE="deploy/.env.example"
 DATA="deploy/data"
@@ -75,7 +76,7 @@ runsh() {
   fi
 }
 
-step "0/4 前置检查"
+step "0/5 前置检查"
 info "变量来源：$SRC_ENV（数据库 $DB_NAME，角色 $DB_USER）"
 info "输出目录：$OUT，保留 $KEEP_DAYS 天"
 if [ "$DRY_RUN" -eq 1 ]; then
@@ -93,7 +94,7 @@ else
   ok "输出目录已就绪"
 fi
 
-step "1/4 数据库逻辑转储"
+step "1/5 Halo 数据库逻辑转储"
 info "pg_dump 走容器内本地套接字，因此无需在命令行暴露数据库密码"
 runsh "docker compose -f $BASE --env-file $SRC_ENV exec -T halodb pg_dump -U $DB_USER -d $DB_NAME --no-owner --clean --if-exists | gzip -9 > \"$DB_FILE\""
 if [ "$DRY_RUN" -eq 0 ]; then
@@ -110,7 +111,19 @@ if [ "$DRY_RUN" -eq 0 ]; then
   esac
 fi
 
-step "2/4 站点数据打包（附件 + 评论）"
+step "2/5 统计库转储（启用 umami 叠加层时）"
+UMAMI_DB_FILE="$OUT/umami-db-$STAMP.sql.gz"
+if [ "$DRY_RUN" -eq 1 ]; then
+  info "dry-run：若 umami-db 正在运行，会额外转储 $UMAMI_DB_FILE"
+elif docker compose -f "$BASE" -f "$ANALYTICS" --env-file "$SRC_ENV" ps -q umami-db 2>/dev/null | grep -q .; then
+  runsh "docker compose -f $BASE -f $ANALYTICS --env-file $SRC_ENV exec -T umami-db pg_dump -U umami -d umami --no-owner --clean --if-exists | gzip -9 > \"$UMAMI_DB_FILE\""
+  gzip -t "$UMAMI_DB_FILE"
+  ok "统计库已转储：$UMAMI_DB_FILE（$(du -h "$UMAMI_DB_FILE" | cut -f1)）"
+else
+  info "umami-db 未运行，跳过统计库转储（统计是可选叠加层）"
+fi
+
+step "3/5 站点数据打包（附件 + 评论）"
 info "会打包 $DATA/halo2（附件/插件）与 $DATA/artalk（评论 SQLite）中存在的目录"
 DATA_DIRS=""
 for d in halo2 artalk; do
@@ -126,8 +139,8 @@ else
   warn "$DATA 下既没有 halo2 也没有 artalk，跳过打包（站点尚未首次启动？）"
 fi
 
-step "3/4 清理超过 $KEEP_DAYS 天的旧备份"
-PRUNE="find \"$OUT\" -maxdepth 1 -type f \\( -name 'halo-db-*.sql.gz' -o -name 'halo-attachments-*.tar.gz' \\) -mtime +$KEEP_DAYS"
+step "4/5 清理超过 $KEEP_DAYS 天的旧备份"
+PRUNE="find \"$OUT\" -maxdepth 1 -type f \\( -name 'halo-db-*.sql.gz' -o -name 'halo-attachments-*.tar.gz' -o -name 'umami-db-*.sql.gz' \\) -mtime +$KEEP_DAYS"
 if [ -d "$OUT" ]; then
   stale="$(eval "$PRUNE -print" | wc -l | tr -d ' ')"
   info "命中保留策略的旧产物：$stale 个"
@@ -137,7 +150,7 @@ else
   warn "$OUT 不存在，无可清理"
 fi
 
-step "4/4 对象存储上传钩子"
+step "5/5 对象存储上传钩子"
 if [ "$UPLOAD" -eq 0 ]; then
   ok "按 --no-upload 跳过上传"
 else

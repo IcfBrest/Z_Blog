@@ -10,3 +10,5 @@ node_modules/
 *.zip
 *.log
 .DS_Store
+# 端到端脚本下载的插件包（按需重新下载，不入库）
+.cache/

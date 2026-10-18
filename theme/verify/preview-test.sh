@@ -7,6 +7,7 @@
 #   bash theme/verify/preview-test.sh --reset    # 验证前先重建实例（同名同版本改模板后必须这样跑）
 #   bash theme/verify/preview-test.sh --integrations # 追加外部集成断言（Artalk 评论后端 + 评论挂载点）
 #   bash theme/verify/preview-test.sh --seo     # 追加 SEO 元信息与 /rss.xml、/sitemap.xml 订阅出口断言
+#   bash theme/verify/preview-test.sh --plugins # 追加外部插件断言（下载并安装搜索/看板娘插件，需要网络）
 #
 # 环境变量：BASE_URL / HALO_ADMIN_USER / HALO_ADMIN_PASS / HALO_ADMIN_EMAIL / HALO_SITE_TITLE / ARTALK_URL
 #
@@ -36,10 +37,11 @@ PURGE=0
 RESET=0
 INTEGRATIONS=0
 SEO=0
+PLUGINS=0
 ARTALK_URL="${ARTALK_URL:-http://127.0.0.1:23366}"
 
 usage() {
-  sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 for arg in "$@"; do
@@ -49,6 +51,7 @@ for arg in "$@"; do
     --reset) RESET=1 ;;
     --integrations) INTEGRATIONS=1 ;;
     --seo) SEO=1 ;;
+    --plugins) PLUGINS=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "未知参数：$arg" >&2; usage >&2; exit 2 ;;
   esac
@@ -626,6 +629,129 @@ if [ "$SEO" -eq 1 ]; then
       bad "订阅出口不可用：$path（HTTP $code）"
     fi
   done
+fi
+
+# ── 5f/6 外部插件（搜索 / 看板娘）─────────────────────────
+if [ "$PLUGINS" -eq 1 ]; then
+  step "5f/6 外部插件（搜索 / 看板娘）"
+
+  # 插件包不进仓库（体积 + 版本漂移），运行到此步才从上游 release 取，缓存后复用。
+  CACHE="$THEME_ROOT/.cache/plugins"
+  mkdir -p "$CACHE"
+
+  # 先记下实例里已有的插件名：安装或启动失败时能立刻对照出真实名字
+  code="$(api_get '/apis/api.console.halo.run/v1alpha1/plugins')"
+  note "现有插件（HTTP $code）：$(grep -o '"name":"[A-Za-z0-9._-]*"' "$TMP/api.json" | cut -d'"' -f4 | sort -u | tr '\n' ' ')"
+
+  fetch_jar() {
+    local repo="$1" tag="$2" asset="$3" out="$CACHE/$3"
+    if [ -s "$out" ]; then
+      note "复用缓存插件包 $asset"
+      return 0
+    fi
+    if curl -fsSL --retry 2 --max-time 180 -o "$out" \
+      "https://github.com/$repo/releases/download/$tag/$asset"; then
+      note "已下载 $asset（$(wc -c < "$out" | tr -d ' ') 字节）"
+    else
+      rm -f "$out"
+      bad "下载失败：$repo $tag $asset"
+      return 1
+    fi
+  }
+
+  install_plugin() {
+    local jar="$1" name="$2" code
+    if [ ! -s "$jar" ]; then
+      bad "缺少插件包：$jar"
+      return 0
+    fi
+    code="$(curl -s -o "$TMP/plugin.json" -w '%{http_code}' -b "$JAR" -c "$JAR" \
+      -X POST -H "X-XSRF-TOKEN: $xsrf" -H 'Accept: application/json' \
+      -F "file=@$jar;type=application/java-archive" \
+      "$BASE_URL/apis/api.console.halo.run/v1alpha1/plugins/install")"
+    case "$code" in
+      200|201) ok "安装插件 $name（HTTP $code）" ;;
+      400) note "插件 $name 已安装，跳过安装" ;;
+      *) bad "安装插件 $name 失败（HTTP $code）"; head -c 200 "$TMP/plugin.json" | sed 's/^/      /'; echo ;;
+    esac
+  }
+
+  # 启停不是 /start 或 /stop，而是 PUT plugins/{name}/plugin-state + {"enabled":bool}
+  enable_plugin() {
+    local name="$1" code
+    code="$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" \
+      -X PUT -H "X-XSRF-TOKEN: $xsrf" -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' --data-binary '{"enabled":true}' \
+      "$BASE_URL/apis/api.console.halo.run/v1alpha1/plugins/$name/plugin-state")"
+    case "$code" in
+      200|202|204) ok "请求启用插件 $name（HTTP $code）" ;;
+      *) bad "启用插件 $name 失败（HTTP $code）" ;;
+    esac
+  }
+
+  # 启用是异步的：reconciler 还要解压、解析、启动插件。必须等状态真的落定，
+  # 否则紧接着的页面断言会撞上「插件还没就绪」的窗口。
+  wait_plugin_enabled() {
+    local name="$1" i=0 body
+    while [ "$i" -lt 30 ]; do
+      body="$(curl -s -b "$JAR" "$BASE_URL/apis/api.console.halo.run/v1alpha1/plugins/$name")"
+      if printf '%s' "$body" | grep -q '"enabled":true'; then
+        ok "插件 $name 已启用"
+        return 0
+      fi
+      i=$((i + 1))
+      sleep 2
+    done
+    bad "插件 $name 未在 60s 内变为启用状态"
+  }
+
+  wait_url() {
+    local url="$1" label="$2" i=0
+    while [ "$i" -lt 15 ]; do
+      if [ "$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL$url")" = "200" ]; then
+        ok "$label 可访问：$url"
+        return 0
+      fi
+      i=$((i + 1))
+      sleep 2
+    done
+    bad "$label 不可访问：$url"
+  }
+
+  # 页面断言也要等：插件刚启用时，模板渲染可能还拿不到它
+  wait_html() {
+    local path="$1" label="$2" i=0 body miss=""
+    shift 2
+    while [ "$i" -lt 20 ]; do
+      body="$(curl -s -H 'Accept: text/html' "$BASE_URL$path")"
+      miss=""
+      for needle in "$@"; do
+        printf '%s' "$body" | grep -q -- "$needle" || miss="$miss $needle"
+      done
+      if [ -z "$miss" ]; then
+        ok "$label（$path，$(printf '%s' "$body" | wc -c | tr -d ' ') 字节）"
+        return 0
+      fi
+      i=$((i + 1))
+      sleep 2
+    done
+    bad "$label（$path）异常： 缺$miss"
+  }
+
+  # 搜索插件随 Halo 镜像预置且默认启用，这里只验证它的前端资源与模板输出的按钮。
+  # 刻意不去动它的启停状态：对已启用的插件重复 PUT plugin-state 会让它进入重启，
+  # 期间模板拿不到插件，断言会随机变红。
+  wait_url "/plugins/PluginSearchWidget/assets/static/search-widget.iife.js" "搜索插件脚本"
+
+  # 看板娘不在预置列表里，需要现装现启
+  if fetch_jar LIlGG/plugin-live2d v2.2.0 plugin-live2d-2.2.0.jar; then
+    install_plugin "$CACHE/plugin-live2d-2.2.0.jar" PluginLive2d
+    enable_plugin PluginLive2d
+    wait_plugin_enabled PluginLive2d
+  fi
+
+  # 插件就绪后，首页应当出现搜索按钮，并由 Halo 自动注入插件自己的脚本
+  wait_html "/" "首页出现搜索入口并注入插件脚本" 'data-sg-search' 'search-widget.iife.js'
 fi
 
 # ── 清理 ─────────────────────────────────────────────────
