@@ -4,8 +4,13 @@
   </template>
 
   <header class="sg-hero">
-    <p class="sg-hero__kicker">Category</p>
+    <p class="sg-hero__kicker">Worldline Branch</p>
     <h1 class="sg-hero__title" th:text="${category.spec.displayName}"></h1>
+    <!-- DR-2：分类 → 世界线分支标识 -->
+    <p class="sg-branch sg-branch--inline">
+      <span class="sg-branch__label">世界线分支</span>
+      <span class="sg-branch__name" th:text="${category.spec.displayName}"></span>
+    </p>
     <p
       class="sg-hero__desc"
       th:if="${category.spec.description}"

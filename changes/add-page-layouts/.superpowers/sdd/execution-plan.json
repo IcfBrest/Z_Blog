@@ -1,0 +1,35 @@
+{
+  "mode": "inline",
+  "source": "approved-plan",
+  "rationale": "用户批准 add-page-layouts 的 proposal.md 与 tasks.md（M3a 页面铺开：世界线横幅、文章详情 CRT+D-Mail、归档时间轴、列表与分类分支、关于/友链卡片、404 终端、造数据与页面级结构断言；卡片数据留在正文 Markdown；密码文章单列 M3b）",
+  "waves": [
+    {
+      "id": "implementation",
+      "strategy": "serial",
+      "tasks": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5",
+        "1.6",
+        "1.7",
+        "1.8",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "3.1",
+        "3.2"
+      ],
+      "depends_on": []
+    }
+  ],
+  "artifacts_hash": "sha256:9237f7cfa03a9661b3b9cd17427f317ed5a2f73ea496872b1b3d99a71e126823",
+  "contract_hash": null,
+  "workflow": "full",
+  "revision": 1,
+  "schema_version": 2,
+  "review_policy": "final",
+  "hash": "sha256:e70dad2f72950b4a6d8266bd1a9e200b635bf9c89c5006584883641bb18c5ae3"
+}

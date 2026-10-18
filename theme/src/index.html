@@ -7,12 +7,13 @@
     Divergence Meter 的初值由服务端直出：data-value 是终值，可见文本也已按位拆成
     辉光管单元（数字 / 小数点 / 百分号）。JS 只负责之后的滚动过渡，因此禁用脚本时
     数值与排版都正确。
+    设置项读 theme.config.interaction.*（Halo 的 theme.config 按设置分组嵌套）。
   -->
   <section
     class="sg-hero"
     th:with="
-      source=${#strings.isEmpty(theme.config.basic.divergence_source) ? 'attractor' : theme.config.basic.divergence_source},
-      value=${#strings.equals(#strings.isEmpty(theme.config.basic.divergence_source) ? 'attractor' : theme.config.basic.divergence_source, 'live') ? #numbers.formatDecimal((posts != null ? posts.total : 0), 1, 6, 'POINT') : '1.048596'},
+      source=${#strings.isEmpty(theme.config.interaction.divergence_source) ? 'attractor' : theme.config.interaction.divergence_source},
+      value=${#strings.equals(#strings.isEmpty(theme.config.interaction.divergence_source) ? 'attractor' : theme.config.interaction.divergence_source, 'live') ? #numbers.formatDecimal((posts != null ? posts.total : 0), 1, 6, 'POINT') : '1.048596'},
       liveValue=${#numbers.formatDecimal((posts != null ? posts.total : 0), 1, 6, 'POINT')}
     "
   >
@@ -47,6 +48,9 @@
     <p class="sg-hero__desc">技术 · 生活 · 碎碎念 —— 世界线收束之前的观测记录。</p>
     <p class="sg-hero__typing" data-typing="El Psy Kongroo." aria-hidden="true">El Psy Kongroo.</p>
   </section>
+
+  <!-- DR-2：首页世界线 SVG 横幅，节点来自分类树的顶层分类 -->
+  <include src="worldline-banner.html"></include>
 
   <ul class="sg-post-list">
     <include src="post-card.html"></include>

@@ -7,14 +7,21 @@
     Halo 2.27 的错误页模板路径是 templates/error/error.html（不是顶层 error.html），
     模型属性为 error.status / error.title / error.detail。参考自带主题 theme-earth。
   -->
-  <section class="sg-error">
-    <p class="sg-error__code" th:text="${error.status}">404</p>
-    <h1 class="sg-error__title" th:text="${#strings.defaultString(error.title, '未找到该世界线')}">
-      未找到该世界线
-    </h1>
-    <p class="sg-error__desc" th:if="${not #strings.isEmpty(error.detail)}" th:text="${error.detail}">
-      这条世界线上没有你要找的页面。
-    </p>
-    <p><a th:href="@{/}" href="/">返回主世界线</a></p>
+  <section class="sg-error sg-terminal">
+    <div class="sg-terminal__bar" aria-hidden="true">
+      <span class="sg-terminal__led"></span>
+      <span class="sg-terminal__name">ERROR</span>
+      <span class="sg-terminal__stamp" th:text="${error.status}">404</span>
+    </div>
+    <div class="sg-terminal__body">
+      <p class="sg-error__code" th:text="${error.status}">404</p>
+      <h1 class="sg-error__title" th:text="${#strings.defaultString(error.title, '未找到该世界线')}">
+        未找到该世界线
+      </h1>
+      <p class="sg-error__desc" th:if="${not #strings.isEmpty(error.detail)}" th:text="${error.detail}">
+        这条世界线上没有你要找的页面。
+      </p>
+      <p><a th:href="@{/}" href="/">返回主世界线</a></p>
+    </div>
   </section>
 </include>

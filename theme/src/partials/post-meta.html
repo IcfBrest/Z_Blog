@@ -1,0 +1,29 @@
+<!--
+  D-Mail 发送记录：文章详情头部的元信息块。
+  发信人取主题设置项 master_name（基础设置组），因为 Halo 模板没有稳定的作者显示名字段
+  （author.spec.displayName 只在作者页上下文存在，post.spec.owner 是登录名）。
+  世界线取第一分类；没有分类时显示「未观测」而不是留空。
+-->
+<aside class="sg-dmail" aria-label="D-Mail 发送记录">
+  <p class="sg-dmail__caption">D-Mail 发送记录</p>
+  <dl class="sg-dmail__list">
+    <div class="sg-dmail__row">
+      <dt>发送时间</dt>
+      <dd>
+        <time th:text="${#temporals.format(post.spec.publishTime, 'yyyy-MM-dd HH:mm')}"></time>
+      </dd>
+    </div>
+    <div class="sg-dmail__row">
+      <dt>发信人</dt>
+      <dd
+        th:text="${#strings.isEmpty(theme.config.basic.master_name) ? '站长' : theme.config.basic.master_name}"
+      ></dd>
+    </div>
+    <div class="sg-dmail__row">
+      <dt>世界线</dt>
+      <dd
+        th:text="${#lists.isEmpty(post.categories) ? '未观测' : post.categories[0].spec.displayName}"
+      ></dd>
+    </div>
+  </dl>
+</aside>

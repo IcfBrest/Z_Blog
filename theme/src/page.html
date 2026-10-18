@@ -3,11 +3,47 @@
     <title th:text="|${singlePage.spec.title} - ${site.title}|">独立页面</title>
   </template>
 
-  <article class="sg-article">
+  <!--
+    关于页 / 友链页用「permalink 命中设置项」识别，而不是自定义页面模板：
+    Halo 的自定义页面模板命名约定未验证，permalink 比较是纯模板逻辑、可回退。
+    设置项留空时回落到项目约定的 about / friends。
+  -->
+  <article
+    class="sg-article"
+    th:with="
+      isMember=${#strings.endsWith(singlePage.status.permalink, '/' + (#strings.isEmpty(theme.config.basic.member_page_slug) ? 'about' : theme.config.basic.member_page_slug))},
+      isFriends=${#strings.endsWith(singlePage.status.permalink, '/' + (#strings.isEmpty(theme.config.basic.friends_page_slug) ? 'friends' : theme.config.basic.friends_page_slug))}
+    "
+  >
     <header class="sg-article-header">
+      <p class="sg-hero__kicker">Record</p>
       <h1 class="sg-article-title" th:text="${singlePage.spec.title}"></h1>
     </header>
-    <div class="sg-article-content" th:utext="${singlePage.content.content}"></div>
+
+    <!-- 关于页：研究所成员卡（数据来自设置项与站点信息，不硬编码角色名） -->
+    <ul class="sg-member-grid" th:if="${isMember}">
+      <li class="sg-member">
+        <p class="sg-member__badge">未来道具研究所</p>
+        <p
+          class="sg-member__name"
+          th:text="${#strings.isEmpty(theme.config.basic.master_name) ? '站长' : theme.config.basic.master_name}"
+        ></p>
+        <p class="sg-member__role">观测者 · 记录世界线变动</p>
+        <p class="sg-member__site" th:text="${site.title}"></p>
+      </li>
+    </ul>
+
+    <section class="sg-terminal" th:classappend="${isFriends} ? 'sg-terminal--friends' : ''">
+      <div class="sg-terminal__bar" aria-hidden="true">
+        <span class="sg-terminal__led"></span>
+        <span class="sg-terminal__name" th:text="${isFriends} ? 'FRIENDS' : 'ARCHIVE'">ARCHIVE</span>
+      </div>
+      <div class="sg-terminal__body">
+        <div th:classappend="${isFriends} ? 'sg-friend-grid' : ''">
+          <div class="sg-article-content" th:utext="${singlePage.content.content}"></div>
+        </div>
+      </div>
+    </section>
   </article>
 
   <div th:if="${haloCommentEnabled}">
