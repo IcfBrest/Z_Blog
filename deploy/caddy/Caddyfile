@@ -22,6 +22,14 @@
 			reverse_proxy artalk:23366
 		}
 
+		# 统计后端：umami 自己配了 BASE_PATH=/umami，因此**不剥前缀**。
+		# 用 /umami* 一次覆盖 /umami 与 /umami/... 两种形态。
+		# 没启用统计叠加层时这里是 502，但主题只在配了 umami_website_id 时才输出
+		# 统计脚本，所以正常配置下不会有人请求到它。
+		handle /umami* {
+			reverse_proxy umami:3000
+		}
+
 		# 与 Halo 处于同一 compose 网络，直接使用服务名与容器内端口。
 		# Caddy 默认会补 X-Forwarded-For / X-Forwarded-Proto / X-Forwarded-Host，
 		# Halo 据此还原访客真实 IP 与请求协议。

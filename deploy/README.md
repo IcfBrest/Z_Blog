@@ -115,14 +115,16 @@ docker volume rm sg-blog-halodb-data          # 彻底删除数据库（不可�
 
 > 本地没有 Caddy，所以**本地**的评论后台要从 `http://localhost:23366/sidebar/` 进入，主题设置里的「评论服务地址」也要填 `http://localhost:23366`。线上留空即可（默认 `/artalk`，同域名走 Caddy）。
 
-### 首次使用：创建管理员并拿到 siteKey
+### 首次使用：创建管理员并新建站点
 
 1. 起站后打开 Artalk 后台。第一次进入会让你注册管理员账号，**第一个注册的账号自动成为管理员**，请立刻注册，别让这个位置空着。
-2. 在后台「站点」里新建站点：名称随你，URL 填站点对外地址（本地 `http://localhost:8090`，线上 `https://<你的域名>`），保存后复制生成的 **siteKey**。
+2. 在后台「站点」里新建站点：**名称必须与主题设置里的「评论站点名」一致**，URL 填站点对外地址（本地 `http://localhost:8090`，线上 `https://<你的域名>`）。
 3. 打开 Halo Console → 外观 → 主题 → 世界线观测站 → 设置 → **集成**，填写：
    - 评论服务地址：线上留空；本地填 `http://localhost:23366`。
-   - 站点名 / Site Key：与第 2 步一致。
+   - 评论站点名：与第 2 步的名称一致。
 4. 评论是否真的显示还取决于两处：文章/页面自身的「允许评论」开关（Halo 内容设置），以及主题设置里的「启用评论」。
+
+> Artalk 前端**没有 siteKey 这个概念**：`dist/Artalk.js` 的初始化参数里只有 `site`（站点名），评论按站点名归属。所以名字对不上时评论会落到「默认站点」，而不是报错。
 
 ### 常用命令
 
@@ -137,6 +139,47 @@ curl -s http://localhost:23366/api/v2/conf | head -c 200        # 探活（返�
 - 升级只改 `.env` 里的 `ARTALK_IMAGE`（当前固定 `artalk/artalk-go:2.10.0`），再 `docker compose up -d artalk`。
 - 评论数据在 `deploy/data/artalk/artalk.db`，每日备份脚本会把它和 Halo 附件一起打包（见「备份与恢复演练」）。
 - 端口冲突时改 `.env` 里的 `ARTALK_SERVER_PORT`，线上入口不受影响（Caddy 走容器网络）。
+
+## 访问统计（umami）
+
+统计是**可选叠加层**：`deploy/docker-compose.analytics.yml` 单独提供 `umami` 与 `umami-db`（PostgreSQL，命名卷 `sg-blog-umami-data`）。不启用时博客完全不受影响；启用时把两个编排文件一起交给 compose：
+
+```bash
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.analytics.yml \
+  --env-file deploy/.env up -d
+```
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `UMAMI_IMAGE` | `ghcr.io/umami-software/umami:3.4.0` | 升级只改这里 |
+| `UMAMI_DB_IMAGE` | `postgres:15-alpine` | 统计库镜像 |
+| `UMAMI_DB_PASSWORD` | `change-me-please` | **必须改** |
+| `UMAMI_APP_SECRET` | `change-me-too` | 会话签名密钥，**必须改** |
+| `UMAMI_TWO_FACTOR_KEY` | `change-me-third` | 两步验证加密密钥，**必须改** |
+| `UMAMI_PORT` | `3000` | 只绑定回环，外网走 Caddy 的 `/umami` |
+
+首次使用：
+
+1. 打开 `/umami`，默认账号 `admin` / `umami`，登录后**立刻改密码**。
+2. 「设置 → 网站」新建站点，域名填 `https://<你的域名>`，保存后复制 **Website ID**。
+3. Halo Console → 外观 → 主题 → 世界线观测站 → 设置 → 集成 → 填「统计站点 ID」，保存。
+4. 前台刷新；`curl -I https://<你的域名>/umami/script.js` 应返回 200。
+
+两个容易踩的点：
+
+- Caddy 里是 `handle /umami*` **不剥前缀**：umami 自己配了 `BASE_PATH=/umami`，它的资源路径本身就以 `/umami` 开头，剥掉反而 404（与 `/artalk` 的处理正好相反）。
+- 统计库和 Halo 一样必须用命名卷：Windows 绑定挂载下 PostgreSQL 的 initdb 会因 chmod 失败而无限重启。
+
+内存预算：umami + umami-db 常驻约 300–400 MB，2C2G 机器上叠满评论 + 统计会偏紧。吃紧时可以把统计放另一台机器，只把主题设置里的「统计脚本地址」指过去 —— 主题不关心统计脚本部署在哪。
+
+备份：每日备份在 `umami-db` 运行时会额外产出 `umami-db-<时间戳>.sql.gz`；统计不是关键数据，恢复时可以选择不要。
+
+停用：
+
+```bash
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.analytics.yml down
+# 连统计库一起删：docker volume rm sg-blog-umami-data
+```
 
 ## 静态校验
 

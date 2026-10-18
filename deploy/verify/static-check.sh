@@ -7,6 +7,7 @@
 #   bash deploy/verify/static-check.sh --docs       # 手册章节完整性
 #   bash deploy/verify/static-check.sh --eol        # 脚本换行符与 git 属性
 #   bash deploy/verify/static-check.sh --artalk     # 评论后端（Artalk）接入
+#   bash deploy/verify/static-check.sh --analytics  # 访问统计（umami 叠加层）
 #
 # 退出码：0 全部通过；1 有检查失败；2 用法错误；3 缺少 docker CLI。
 set -euo pipefail
@@ -32,6 +33,7 @@ DO_VARS=0
 DO_DOCS=0
 DO_EOL=0
 DO_ARTALK=0
+DO_ANALYTICS=0
 
 for arg in "$@"; do
   case "$arg" in
@@ -40,8 +42,9 @@ for arg in "$@"; do
     --docs) DO_DOCS=1 ;;
     --eol)  DO_EOL=1 ;;
     --artalk) DO_ARTALK=1 ;;
-    --all)  DO_PROD=1; DO_VARS=1; DO_DOCS=1; DO_EOL=1; DO_ARTALK=1 ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    --analytics) DO_ANALYTICS=1 ;;
+    --all)  DO_PROD=1; DO_VARS=1; DO_DOCS=1; DO_EOL=1; DO_ARTALK=1; DO_ANALYTICS=1 ;;
+    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
     *) printf '未知参数: %s\n' "$arg" >&2; exit 2 ;;
   esac
 done
@@ -266,6 +269,98 @@ check_artalk() {
   fi
 }
 
+check_analytics() {
+  head1 "访问统计（umami 叠加层）"
+  local analytics="deploy/docker-compose.analytics.yml"
+  if [ -f "$analytics" ]; then
+    ok "存在统计叠加层 $analytics"
+  else
+    bad "缺少 $analytics"
+    return
+  fi
+
+  local out
+  out="$(mktemp)"
+  if ! render_compose "$out" -f "$BASE" -f "$analytics" --env-file "$ENV_FILE"; then
+    bad "统计叠加层无法与基础编排合并渲染"
+    rm -f "$out"
+    return
+  fi
+
+  if grep -q '^  umami:' "$out" && grep -q '^  umami-db:' "$out"; then
+    ok "编排含 umami 与 umami-db 两个服务"
+  else
+    bad "编排缺少 umami 或 umami-db"
+  fi
+
+  if grep -q 'image: ghcr.io/umami-software/umami:3\.' "$out"; then
+    ok "umami 镜像固定到 3.x 补丁版本"
+  else
+    bad "umami 镜像未固定版本"
+  fi
+
+  # 统计库同样必须是命名卷：Windows 绑定挂载下 PostgreSQL 的 initdb 会失败
+  if grep -q 'name: sg-blog-umami-data' "$out"; then
+    ok "统计库使用命名卷 sg-blog-umami-data"
+  else
+    bad "统计库没有使用命名卷"
+  fi
+  if grep -q 'deploy.data.umami' "$out"; then
+    bad "统计库被绑定挂载到 deploy/data，Windows 上会 initdb 失败"
+  else
+    ok "统计库未使用绑定挂载"
+  fi
+
+  local body
+  body="$(tr -d '\r' <"$analytics")"
+  # 叠加层里只有 umami 声明了 depends_on，所以这里出现 service_healthy 就是等统计库
+  if printf '%s\n' "$body" | grep -q 'condition: service_healthy'; then
+    ok "umami 等统计库健康后才启动"
+  else
+    bad "umami 没有等待统计库健康"
+  fi
+
+  if grep -q 'api/heartbeat' "$out"; then
+    ok "umami 健康检查打 /api/heartbeat"
+  else
+    bad "umami 健康检查缺失"
+  fi
+
+  if grep -q 'host_ip: 127.0.0.1' "$out" && grep -q 'published: "3000"' "$out"; then
+    ok "umami 端口仅绑定回环"
+  else
+    bad "umami 端口未限制在回环地址"
+  fi
+
+  # 变量泄漏：渲染后不该再出现 ${...}
+  if grep -q '\${' "$out"; then
+    bad "渲染结果里仍有未替换的变量"
+  else
+    ok "统计叠加层的变量全部可替换"
+  fi
+  rm -f "$out"
+
+  local v
+  for v in UMAMI_IMAGE UMAMI_DB_IMAGE UMAMI_DB_PASSWORD UMAMI_APP_SECRET UMAMI_TWO_FACTOR_KEY UMAMI_PORT; do
+    if sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$ENV_FILE" | grep -qx "$v"; then
+      ok "$ENV_FILE 声明 $v"
+    else
+      bad "$ENV_FILE 缺少 $v"
+    fi
+  done
+
+  if [ -f deploy/caddy/Caddyfile ] && grep -q 'handle /umami\*' deploy/caddy/Caddyfile; then
+    ok "Caddyfile 对 /umami 前缀不剥离地反代"
+  else
+    bad "Caddyfile 缺少 /umami 路由"
+  fi
+  if [ -f deploy/caddy/Caddyfile ] && grep -q 'reverse_proxy umami:3000' deploy/caddy/Caddyfile; then
+    ok "Caddyfile 反代目标为 umami:3000"
+  else
+    bad "Caddyfile 未指向 umami:3000"
+  fi
+}
+
 check_docs() {
   head1 "手册完整性"
   if [ ! -f "$README" ]; then
@@ -334,6 +429,7 @@ check_base
 [ "$DO_VARS" -eq 1 ] && check_vars
 [ "$DO_PROD" -eq 1 ] && check_prod
 [ "$DO_ARTALK" -eq 1 ] && check_artalk
+[ "$DO_ANALYTICS" -eq 1 ] && check_analytics
 [ "$DO_DOCS" -eq 1 ] && check_docs
 [ "$DO_EOL" -eq 1 ]  && check_eol
 

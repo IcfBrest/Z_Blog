@@ -234,6 +234,51 @@ CSS 是靠「页面根节点的类」区分这两页的：`page.html` 先把 `sg
 - 浏览器控制台报 `Artalk 全局对象不存在` → `dist/Artalk.js` 返回的不是 JS（多半是 404 页面或反代前缀没剥）。
 - 评论发不出去 → Artalk 后台站点名与 `comments_site_name` 不一致，评论落到了别的站点。
 
+## 搜索
+
+搜索用官方插件 [PluginSearchWidget](https://github.com/halo-dev/plugin-search-widget)。主题只提供一个触发按钮，**弹窗、请求、结果渲染全部由插件自己完成**：
+
+- 按钮输出在共享骨架的 `.sg-controls` 里，带 `th:if="${pluginFinder.available('PluginSearchWidget')}"` —— 插件没装或没启用时按钮根本不出现，不会留下一个点不动的死按钮。
+- 点击与快捷键由 `src/js/search.ts` 处理：调用 `window.SearchWidget.open()`；输入框外按 `/` 也能唤起；`⌘K` / `Ctrl+K` 插件自己会拦。
+- 插件脚本由 Halo 自动注入（`/plugins/PluginSearchWidget/assets/static/search-widget.iife.js`），主题不手写 `<script>`。
+- 外观通过插件公开的 CSS 变量主题化（13 个 `--halo-search-widget-*`，见 `src/css/pages.css`），**不覆盖它的内部类名**，避免插件升级后失效。
+
+装配步骤：
+
+1. 控制台「插件」页确认 **Plugin Search Widget** 已安装并启用，且版本 ≥ 1.8.0（需要 Halo 2.26+）。
+2. 打开首页，页头右侧出现「搜索 /」按钮。
+3. 首次搜索前索引可能还在建，返回空结果属正常，等索引汇总完成后即可命中。
+
+排查：
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 页头没有搜索按钮 | 插件未安装或未启用 | 控制台插件页确认状态为「已启用」 |
+| 按钮在但点了没反应 | 插件脚本未加载完或被拦截 | 看控制台是否 `SearchWidget` 未定义；脚本就绪后按钮自动可用，始终拿不到会自动摘除按钮 |
+| 搜索返回 404 | 插件版本过低 | 本项目验证的是 v1.8.0 |
+
+## 看板娘
+
+看板娘用社区插件 [plugin-live2d](https://github.com/LIlGG/plugin-live2d)（不是官方插件）。它在页面左下角自己渲染，**主题里既没有它的模板也没有它的脚本**，两者唯一的接触面是样式：
+
+- 插件根节点固定是 `#live2d-widget`，主题只针对这个 id 写规则，不碰它内部的 `.live2d-*` 类名 —— 插件升级不会打断主题。
+- 简洁模式（`data-motion="off"`）下用 `display: none !important` 收起：呼吸、眨眼、打字都算动效，「一键关闭」必须覆盖到它。
+- 页脚补了 `padding-bottom: 3.25rem`，避免窄屏时被它压住。
+
+装配步骤：
+
+1. 控制台「插件」页安装 **plugin-live2d**（≥ 2.0.0，需要 Halo 2.25+），启用后左下角出现看板娘。
+2. 模型与服装在插件自己的设置里换；插件不随包提供模型文件，默认走它内置的模型源。
+3. 工具条里的「退出 Live2d」让访客可以自行关闭；不想要这个工具可以在插件的工具设置里去掉。
+
+排查：
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 左下角没有模型 | 插件未启用，或模型源不可达 | 看插件状态与容器日志；模型源通常需要外网 |
+| 简洁模式下还看得见 | 主题没重新构建 | 确认 `src/css/pages.css` 含 `#live2d-widget` 规则并 `pnpm build` |
+| 压住页脚内容 | 窄屏 + 看板娘展开 | 已留 3.25rem 底部间距；仍不够时在插件设置里调小尺寸 |
+
 ## SEO 与订阅
 
 `src/partials/meta.html` 被 10 个路由模板的 `<head>` include，输出站点级 SEO 元信息：
@@ -254,6 +299,35 @@ CSS 是靠「页面根节点的类」区分这两页的：`page.html` 先把 `sg
 - `/sitemap.xml` —— 内置 sitemap 插件
 
 两者都不需要额外装插件；如果被别的插件接管，地址也不变。
+
+## 访问统计（umami）
+
+`src/partials/analytics.html` 被骨架 include 到每个页面的 `<head>`，但它**默认什么都不输出**：只有设置里填了站点 ID，才会插入追踪脚本。
+
+| 设置项 | 默认值 | 说明 |
+|---|---|---|
+| 统计脚本地址 | `/umami/script.js` | 自托管 umami 的追踪脚本，同源路径由 Caddy 反代 |
+| 统计站点 ID | 空 | 在 umami 后台「设置 → 网站」新建站点后得到；留空 = 不统计 |
+
+两条刻意的设计：
+
+- **不输出空 id 的脚本**：umami 拿到空 `data-website-id` 会照常上报，等于往后台写脏数据；而且没启用统计的站点会平白多一次 `/umami/script.js` 的 404。
+- **标签带 `defer`**：统计不该和正文抢首屏；脚本地址也不写死绝对 URL，换域名或换子路径只改设置。
+
+启用步骤（需要 `deploy/docker-compose.analytics.yml` 叠加层，见 `deploy/README.md` 的「访问统计（umami）」）：
+
+1. 叠加上层启动 umami：`docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.analytics.yml --env-file deploy/.env up -d`
+2. 打开 `/umami`，首次登录用默认账号 `admin` / `umami`，**先改密码**
+3. 「设置 → 网站」新建站点，域名填你的站点域名，复制得到的 Website ID
+4. 控制台「外观 → 世界线观测站 → 设置 → 集成」把 Website ID 填进「统计站点 ID」，保存后刷新前台
+
+排查：
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 页面里没有统计脚本 | 「统计站点 ID」为空 | 填 ID 并保存；空值是设计上的关闭开关 |
+| 脚本 404 / 502 | 没启统计叠加层，或 Caddy 没反代 `/umami` | `docker compose ... -f deploy/docker-compose.analytics.yml up -d`；`curl -I 站点/umami/script.js` |
+| 后台没有实时访客 | 脚本被浏览器扩展拦了（广告拦截器常拦 analytics） | 换无痕窗口或加白名单再验 |
 
 ## 本地预览验证
 

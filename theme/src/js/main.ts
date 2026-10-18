@@ -14,6 +14,7 @@ import { initTypewriter } from "./typewriter";
 import { initParticles } from "./particles";
 import { initPointerGlow } from "./pointer-glow";
 import { initComments } from "./comments";
+import { initSearch } from "./search";
 
 function boot(): void {
   initMotion();
@@ -22,6 +23,8 @@ function boot(): void {
   initTypewriter();
   initParticles();
   initPointerGlow();
+  // 搜索按钮依赖插件的全局对象，内部自带「晚到就等一会儿、实在没有就摘掉」的兜底
+  initSearch();
   // 评论按需加载外部脚本，不阻塞首屏；失败时只降级，不影响正文
   void initComments();
 }

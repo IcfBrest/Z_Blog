@@ -1,0 +1,6 @@
+{
+  "previous_plan_hash": "sha256:4fda56586ffee08bbdb7fc7907c72456a8bc4329040412505df74cb5be96548f",
+  "previous_revision": 1,
+  "reason": "实现完成：勾选全部 15 个任务；订正 3.1/3.2/3.3/3.6 的措辞（服务名 umami-db、/umami 不剥前缀、统计库条件转储、preview-test 的 --analytics 步骤改由文档加静态校验覆盖，因本机启动被安全守卫拦下）；把实施期实测事实（插件启停端点、丢 JAR 不安装、搜索插件为预设、umami BASE_PATH）补进 design.md",
+  "evidence": "scope changed: passing evidence invalidated; failures retained"
+}

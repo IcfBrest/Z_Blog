@@ -1,0 +1,72 @@
+# 可选叠加层：自托管 umami 访问统计。
+#
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.analytics.yml \
+#     --env-file deploy/.env up -d
+#
+# 之所以独立成一个文件而不是并进基础编排：统计挂了不该影响博客，博客也不需要
+# 为了跑统计多起两个容器。不启用它时主题不会输出任何统计脚本
+# （见 theme/src/partials/analytics.html 对 umami_website_id 的判空）。
+#
+# 必须叠在 docker-compose.yml 之上使用：umami 要加入基础编排建立的 halo_network，
+# 由 Caddy 通过服务名 umami:3000 反代到 /umami/ 子路径。单独使用本文件会因为没有
+# 该网络而报错，这是预期行为。
+
+services:
+  umami-db:
+    image: ${UMAMI_DB_IMAGE:-postgres:15-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-change-me-please}
+    volumes:
+      # 与 Halo 的数据库同理：Windows 绑定挂载不支持 chmod，PostgreSQL 的 initdb
+      # 会以 "Operation not permitted" 无限重启，所以统计库同样用命名卷。
+      - umami_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "umami"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - halo_network
+
+  umami:
+    image: ${UMAMI_IMAGE:-ghcr.io/umami-software/umami:3.4.0}
+    restart: unless-stopped
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    environment:
+      DATABASE_TYPE: postgresql
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-change-me-please}@umami-db:5432/umami
+      # umami v2 起必填：前者签登录态，后者加密 2FA 种子；泄露等于交出后台
+      APP_SECRET: ${UMAMI_APP_SECRET:-change-me-too}
+      TWO_FACTOR_ENCRYPTION_KEY: ${UMAMI_TWO_FACTOR_KEY:-change-me-third}
+      # 挂在 /umami 子路径下。前缀不剥离，所以服务端也要知道自己被挂在子路径上，
+      # 否则重定向与页面内绝对链接会跑到站点根。
+      BASE_PATH: /umami
+      # 追踪脚本文件名，最终对外是 /umami/script.js
+      TRACKER_SCRIPT_NAME: script
+    ports:
+      # 仅回环：外部一律经 Caddy 的 HTTPS 进入，避免绕过代理直连统计后端
+      - "127.0.0.1:${UMAMI_PORT:-3000}:3000"
+    healthcheck:
+      # BASE_PATH 生效与否取决于版本，两条路径都探一次，避免健康检查误判
+      test:
+        - CMD
+        - sh
+        - -c
+        - curl -fsS http://localhost:3000/umami/api/heartbeat >/dev/null || curl -fsS http://localhost:3000/api/heartbeat >/dev/null
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    networks:
+      - halo_network
+
+volumes:
+  umami_db_data:
+    # 固定卷名，便于 docker volume inspect / 备份时认出
+    name: sg-blog-umami-data

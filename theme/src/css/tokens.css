@@ -34,6 +34,8 @@
   --sg-nixie-well-deep: rgba(120, 50, 0, 0.35);
   --sg-nixie-edge: rgba(255, 149, 0, 0.3);
   --sg-nixie-glass: rgba(255, 255, 255, 0.04);
+  /* 弹窗遮罩：比 --sg-panel 更深，让弹窗外的页面明显退到背景 */
+  --sg-void: rgba(3, 3, 7, 0.72);
 
   /* ── 语义层（组件只引用这一层）────────────────────────── */
   --bg: var(--sg-bg);
@@ -52,6 +54,7 @@
   --border: var(--sg-border);
   --link: var(--sg-green);
   --focus: var(--sg-nixie);
+  --overlay: var(--sg-void);
 
   /* 终端绿：不随世界线变化，用于品牌标记与辉光等身份特征 */
   --term: var(--sg-green);
