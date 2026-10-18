@@ -1,9 +1,9 @@
 # M2 核心组件 —— 整段审查报告
 
 - 变更：`add-core-components`（M2）
-- 审查范围：`5c5b5d0fdf0c6612ebef412417014ea279e619e9..96ac0cb`（26 files, +1867/−45）
+- 审查范围：`5c5b5d0fdf0c6612ebef412417014ea279e619e9..f65fc8d`（含复审时的定点修复）
 - 审查策略：Native `final`（由执行者本人审查完整 diff，不派子代理）
-- 判定：**fail**（1 项 Important，需定点修复后复审）
+- 判定：**pass**（首轮 1 项 Important 已定点修复并复审）
 
 ## 逐任务核对
 
@@ -36,7 +36,9 @@ else if (unit.type === "dot") span.className = "sg-divergence__dot";
 
 而样式表里的选择器已改为单横线（`theme/src/css/main.css:715` 的 `.sg-divergence-digit`、`:721` 的 `.sg-divergence-dot`）——为规避 Thymeleaf 的 `__` 预处理（见 design.md 已知事实）。服务端直出的 HTML 用新类名，所以静态校验与 `preview-test.sh` 全部通过；但 `divergence.ts` 在 `initDivergence()` 末尾无条件 `render(current)`，会立刻把服务端渲染的单元替换成**没有样式的**同名文本，辉光管在首屏 JS 执行后变成裸文字。
 
-这是「静态断言看着对、运行时是错的」典型漏检：`preview-test.sh` 抓的是服务端响应体，抓不到 DOM 被 JS 改写后的结果。修复：类名同步为 `sg-divergence-digit` / `sg-divergence-dot`；`unit-logic.mjs` 无法覆盖 DOM，故在 README 人工走查清单已列「辉光管六位数字 + 小数点 + 百分号，橙色辉光」一项作为兜底。
+这是「静态断言看着对、运行时是错的」典型漏检：`preview-test.sh` 抓的是服务端响应体，抓不到 DOM 被 JS 改写后的结果。
+
+**修复（f65fc8d）**：类名同步为 `sg-divergence-digit` / `sg-divergence-dot`；同时在 `check-theme.sh --components` 增加第 6 条交叉断言——JS 里写死的 `sg-*` 类名必须能在样式表或模板里找到（`sg-worldline`/`sg-motion` 两个 localStorage 键名除外）。负向验证：把类名改回双下划线后 `--components` 立刻报 `通过 11 项，失败 1 项`，改回后恢复 `12/12`；重新构建并 `--reset` 起站后，线上 bundle 含 `sg-divergence-digit`、不含 `sg-divergence__digit`。
 
 ### 次要（记录，不阻塞）
 
@@ -53,6 +55,8 @@ else if (unit.type === "dot") span.className = "sg-divergence__dot";
 ## 验证证据
 
 - `node theme/verify/unit-logic.mjs` → 29 项通过
-- `bash theme/verify/check-theme.sh --all` → 37 项通过
+- `bash theme/verify/check-theme.sh --all` → 38 项通过（含新增的 JS 类名交叉断言）
+- `bash theme/verify/check-theme.sh --components` → 12 项通过；负向验证（改回 `__` 类名）→ 11 项通过 1 项失败
 - `bash deploy/verify/static-check.sh --all` → 25 项通过
-- `bash theme/verify/preview-test.sh --reset --keep` → 30 项通过（首页 200/8521 B，六路由齐备）
+- `bash theme/verify/preview-test.sh --reset --keep` → 30 项通过（首页 200/8521 B，六路由齐备，静态资源 200）
+- 线上 bundle 检查：`main-BhABRd8j.js` 含 `sg-divergence-digit`，不含 `sg-divergence__digit`

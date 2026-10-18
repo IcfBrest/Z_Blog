@@ -1,11 +1,10 @@
 {
-  "status": "fail",
-  "issue": "I-1",
+  "status": "pass",
   "base": "5c5b5d0fdf0c6612ebef412417014ea279e619e9",
-  "head": "96ac0cb34e77d18350de24213ae06efb562ab297",
-  "report": ".superpowers\\sdd\\reviews\\snapshots\\9dbd5dae-0c9a-42a4-b1e1-1c714d0f0d4e.md",
-  "report_sha256": "sha256:4099f50bfd130fe590fb200a3bf2e55bc2f7aa645a4acd880879b9812cf07ad8",
+  "head": "f65fc8d0e0d716113cdfd9ff6c36300e054d26e5",
+  "report": ".superpowers\\sdd\\reviews\\snapshots\\ea9f6173-a528-4a7c-a22a-1ac2d356f188.md",
+  "report_sha256": "sha256:18819d32b927825ccc2dcabec35724d85081e2a6cae408a07c91272f0c6a0817",
   "plan_hash": "sha256:010d36373a03ca4f20ef99b226dc208e418ccdb784c87fc73dededa7060b11b1",
   "plan_revision": 2,
-  "recorded_at": "2026-10-18T07:41:23.488Z"
+  "recorded_at": "2026-10-18T07:44:56.375Z"
 }
