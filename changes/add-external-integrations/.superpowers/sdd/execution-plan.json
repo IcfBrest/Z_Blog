@@ -1,7 +1,7 @@
 {
   "mode": "inline",
   "source": "approved-plan",
-  "rationale": "用户批准 add-external-integrations 的 proposal.md 与 tasks.md（M4b：搜索入口、看板娘、umami 统计三项都做，统计用独立可选叠加层）",
+  "rationale": "实现完成：勾选全部 15 个任务；端到端暴露看板娘插件在 Halo 2.27 上启用无效（plugins/disabled.txt），把 2.1 的措辞订正为降级路径并把实测事实写进 design.md",
   "waves": [
     {
       "id": "implementation",
@@ -26,11 +26,11 @@
       "depends_on": []
     }
   ],
-  "artifacts_hash": "sha256:a5d1ee91eb9d6cd48b75bfb55ce61d2568fa71822d7f9f3e00c75be5847b24f6",
+  "artifacts_hash": "sha256:7a198c5d235a8bc8d2e9b7612a1d382fb841d83f56b0ad5f5c8bdc01a5c86d92",
   "contract_hash": null,
   "workflow": "full",
-  "revision": 1,
+  "revision": 3,
   "schema_version": 2,
   "review_policy": "final",
-  "hash": "sha256:4fda56586ffee08bbdb7fc7907c72456a8bc4329040412505df74cb5be96548f"
+  "hash": "sha256:c8e36afcef30378cc3be9b4760cfaf110b51c0ceb5f4e54866fbef765c058ddb"
 }

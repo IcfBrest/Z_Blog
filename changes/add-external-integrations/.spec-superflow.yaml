@@ -10,7 +10,7 @@ completion_reason: null
 revision: null
 
 # === Hashes (fast staleness detection) ===
-artifacts_hash: sha256:a5d1ee91eb9d6cd48b75bfb55ce61d2568fa71822d7f9f3e00c75be5847b24f6
+artifacts_hash: sha256:7a198c5d235a8bc8d2e9b7612a1d382fb841d83f56b0ad5f5c8bdc01a5c86d92
 contract_hash: null
 
 # === Execution progress ===
@@ -24,7 +24,7 @@ spec_publication_receipt: null
 
 # === Metadata ===
 change_name: add-external-integrations
-last_transition: 2026-10-18T14:30:59.855Z
+last_transition: 2026-10-18T15:27:35.287Z
 last_transition_from: null
 last_transition_to: null
 

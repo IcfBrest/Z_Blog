@@ -21,6 +21,7 @@
 ### 批次 2：看板娘
 
 - [x] **2.1 插件安装步骤**：修改 `theme/verify/preview-test.sh` 新增 `--plugins` 步骤（下载 `plugin-live2d-2.2.0.jar` → 插件安装接口 → 启用 → 断言 `plugin-live2d-config` 注入与其静态资源 200），探针失败时跳过该步并打印手工步骤；完成后端到端能证明看板娘真的挂上。
+  - 实施期订正：Halo 2.27 把插件名写入 `plugins/disabled.txt` 之后，`PUT plugins/{name}/plugin-state` 返回 200 却不会移除该记录，插件始终停在 `DISABLED`，因此「启用后断言注入」在本机不可自动确认；脚本降级为提示 + 手工步骤（见审查报告 I-3）。
 - [x] **2.2 简洁模式联动样式**：修改 `theme/src/css/pages.css`，加 `:root[data-motion="off"] #live2d-widget { display: none !important; }` 与 `body` 底部安全间距；完成后简洁模式下看板娘收起且页脚不被遮挡。
 - [x] **2.3 看板娘检查段**：修改 `theme/verify/check-theme.sh` 新增 `--plugins` 段（两条 CSS 规则、不依赖插件内部类名、纳入 `--all`）；完成后 `--plugins` 单独可跑。
 - [x] **2.4 插件安装文档**：修改 `deploy/README.md` 与 `theme/README.md`，记录「丢 JAR 不生效、必须走安装接口」的实测结论与安装步骤；完成后文档给出可直接照做的命令。

@@ -85,3 +85,9 @@
 - **umami 的 `BASE_PATH` 决定了反代要不要剥前缀**：容器以 `BASE_PATH=/umami` 启动时资源路径自带 `/umami`，Caddy 必须用 `handle /umami*` 原样透传；`/artalk` 相反（Artalk 用相对资源）所以要 `handle_path` 剥前缀。
 - **本机无法自动启动 umami 叠加层**：启动命令里出现 `deploy/.env` 会被安全守卫拦下（`secret.basename.env`），因此统计的运行时验证只能留到线上首次部署时人工执行一次；静态校验（合并渲染、变量、健康检查、命名卷、反代规则）仍是全绿。
 
+
+## 实施期新增的事实（实测）
+
+- **Halo 2.27 的插件禁用记录**：插件被禁用后名字会写进 `/root/.halo2/plugins/disabled.txt`；此后 `PUT /apis/api.console.halo.run/v1alpha1/plugins/{name}/plugin-state`（`{"enabled":true}` 与 `{"spec":{"enabled":true}}` 两种 body 都试过）返回 200，但 `disabled.txt` 不更新、`status.phase` 恒为 `DISABLED`，`PluginReconciler` 日志反复出现 `Disabled plugin 'PluginLive2d@2.2.0'` 且没有 ERROR。→ 看板娘启用无法在脚本里自动确认，端到端降级为「安装成功 + 打印手工启用步骤」。
+- **发行版预设插件**：全新实例的 `deploy/data/halo2/plugins/` 自带 `PluginSearchWidget-1.7.1`、`PluginCommentWidget-3.3.2`、`PluginFeed-1.5.0`、`PluginSitemap-1.3.0`、`shiki`、`editor-hyperlink-card`、`app-store-integration`、`ai-foundation`，而镜像内没有任何插件 JAR —— 它们是 Halo 启动时解压到工作目录的预设，因此搜索无需安装即可用。
+- **丢 JAR 不等于安装**：把 `plugin-live2d-2.2.0.jar` 放进 `plugins/` 并重启，`/plugins/PluginLive2d/assets/static/live2d/live2d.js` 仍 404，`PluginReconciler` 日志里根本不出现该插件；必须走 `plugins/install` 接口。

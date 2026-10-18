@@ -676,12 +676,12 @@ if [ "$PLUGINS" -eq 1 ]; then
     esac
   }
 
-  # 启停不是 /start 或 /stop，而是 PUT plugins/{name}/plugin-state + {"enabled":bool}
+  # 启停不是 /start 或 /stop，而是 PUT plugins/{name}/plugin-state，body 是 Plugin 的部分对象：{"spec":{"enabled":bool}}
   enable_plugin() {
     local name="$1" code
     code="$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR" -c "$JAR" \
       -X PUT -H "X-XSRF-TOKEN: $xsrf" -H 'Accept: application/json' \
-      -H 'Content-Type: application/json' --data-binary '{"enabled":true}' \
+      -H 'Content-Type: application/json' --data-binary '{"spec":{"enabled":true}}' \
       "$BASE_URL/apis/api.console.halo.run/v1alpha1/plugins/$name/plugin-state")"
     case "$code" in
       200|202|204) ok "请求启用插件 $name（HTTP $code）" ;;
@@ -702,7 +702,14 @@ if [ "$PLUGINS" -eq 1 ]; then
       i=$((i + 1))
       sleep 2
     done
-    bad "插件 $name 未在 60s 内变为启用状态"
+    # 实测：Halo 2.27 把插件名写进 /root/.halo2/plugins/disabled.txt 之后，
+    # PUT plugin-state 返回 200 却不会把它从该文件里移除，reconciler 于是反复
+    # Disabled。这不是主题能修的问题，因此这里降级为提示 + 手工步骤，不判失败
+    # （任务 2.1 已允许「探针失败时跳过该步并打印手工步骤」）。
+    note "插件 $name 未在 60s 内变为启用状态（Halo 把插件记在 plugins/disabled.txt）"
+    printf '     手工启用：控制台 → 插件 → 找到「live2d 看板娘」→ 点启用；\n' >&2
+    printf '     或在实例上删除 plugins/disabled.txt 中对应行后重启 Halo。\n' >&2
+    return 1
   }
 
   wait_url() {
