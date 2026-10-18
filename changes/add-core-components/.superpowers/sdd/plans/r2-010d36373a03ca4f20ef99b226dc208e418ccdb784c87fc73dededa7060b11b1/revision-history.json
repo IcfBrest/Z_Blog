@@ -1,0 +1,6 @@
+{
+  "previous_plan_hash": "sha256:b73472bcd58b1c4ce53e96a9a38ebb24f704e7a904bc931fdca368e8bb03a00f",
+  "previous_revision": 1,
+  "reason": "实现完成：勾选 13 个任务，并把端到端验证暴露的三处真实缺陷（Thymeleaf __ 预处理、同名重复安装不更新模板、全新卷 compose 只建不启）记入 design.md 已知事实",
+  "evidence": "scope changed: passing evidence invalidated; failures retained"
+}

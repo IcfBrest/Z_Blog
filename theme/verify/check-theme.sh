@@ -7,6 +7,7 @@
 #   bash theme/verify/check-theme.sh --fonts    # 只查字体自托管
 #   bash theme/verify/check-theme.sh --layout   # 只查响应式断点
 #   bash theme/verify/check-theme.sh --templates# 只查路由模板齐全
+#   bash theme/verify/check-theme.sh --components # 只查交互组件（世界线/简洁模式/辉光管/动效）
 #   bash theme/verify/check-theme.sh --docs     # 只查主题开发说明
 #
 # 退出码：0 全部通过 / 1 有失败 / 2 用法错误 / 3 缺少构建产物
@@ -26,10 +27,11 @@ DO_TOKENS=0
 DO_FONTS=0
 DO_LAYOUT=0
 DO_TEMPLATES=0
+DO_COMPONENTS=0
 DO_DOCS=0
 
 usage() {
-  sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 for arg in "$@"; do
@@ -38,15 +40,16 @@ for arg in "$@"; do
     --fonts) DO_FONTS=1 ;;
     --layout) DO_LAYOUT=1 ;;
     --templates) DO_TEMPLATES=1 ;;
+    --components) DO_COMPONENTS=1 ;;
     --docs) DO_DOCS=1 ;;
-    --all) DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_DOCS=1 ;;
+    --all) DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_DOCS=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "未知参数：$arg" >&2; usage >&2; exit 2 ;;
   esac
 done
 
-if [ "$DO_TOKENS$DO_FONTS$DO_LAYOUT$DO_TEMPLATES$DO_DOCS" = "00000" ]; then
-  DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_DOCS=1
+if [ "$DO_TOKENS$DO_FONTS$DO_LAYOUT$DO_TEMPLATES$DO_COMPONENTS$DO_DOCS" = "000000" ]; then
+  DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_DOCS=1
 fi
 
 PASS=0
@@ -247,6 +250,138 @@ if [ "$DO_TEMPLATES" -eq 1 ]; then
   fi
 fi
 
+# ── 交互组件（世界线 / 简洁模式 / Divergence Meter / 动效）──
+if [ "$DO_COMPONENTS" -eq 1 ]; then
+  head_ "交互组件（世界线切换、简洁模式、Divergence Meter）"
+
+  TOKENS_CSS="$ROOT/src/css/tokens.css"
+  SETTINGS="$ROOT/settings.yaml"
+
+  # 1) 两条世界线都必须完整重映射三个语义变量，否则切换会漏色
+  for wl in alpha beta; do
+    block="$(sed -n "/:root\[data-worldline=\"$wl\"\] {/,/^}/p" "$TOKENS_CSS" 2>/dev/null || true)"
+    if printf '%s' "$block" | grep -q -- '--accent:' \
+      && printf '%s' "$block" | grep -q -- '--link:' \
+      && printf '%s' "$block" | grep -q -- '--border:'; then
+      ok "世界线 $wl 完整重映射 --accent / --link / --border"
+    else
+      bad "世界线 $wl 的重映射不完整（需要 --accent、--link、--border）"
+    fi
+  done
+
+  # 2) 时长必须集中定义，简洁模式与系统偏好都要能把它们归零
+  missing_motion=""
+  for m in --motion-fast --motion-base --motion-slow --motion-loop; do
+    grep -q -- "$m:" "$CSS_FILE" || missing_motion="$missing_motion $m"
+  done
+  if [ -z "$missing_motion" ]; then
+    ok "构建产物含全部动效时长变量"
+  else
+    bad "构建产物缺少动效时长变量:$missing_motion"
+  fi
+
+  # Lightning CSS 会把 [data-motion="off"] 压缩成 [data-motion=off]，两种写法都要认
+  if grep -Eq 'data-motion="?off"?' "$CSS_FILE"; then
+    ok "存在 data-motion=\"off\" 的归零规则"
+  else
+    bad "缺少 data-motion=\"off\" 的归零规则"
+  fi
+
+  if grep -q 'prefers-reduced-motion' "$CSS_FILE"; then
+    ok "存在 prefers-reduced-motion 兜底"
+  else
+    bad "缺少 prefers-reduced-motion 兜底"
+  fi
+
+  # 3) 所有 transition/animation 都必须引用 --motion-*，否则简洁模式关不干净
+  bare_motion="$(grep -Eo '(transition|animation)[^;{}]*' "$CSS_FILE" 2>/dev/null \
+    | grep -v 'none' | grep -v 'var(--motion-' | head -5 || true)"
+  if [ -z "$bare_motion" ]; then
+    ok "所有 transition/animation 都引用 --motion-* 变量"
+  else
+    bad "以下动画没有引用 --motion-*（简洁模式会关不干净）："
+    printf '%s\n' "$bare_motion" | sed 's/^/      /'
+  fi
+
+  # 4) 动画不得作用于会引起重排的属性
+  layout_anim="$(grep -Eo '(transition|animation)[^;{}]*' "$CSS_FILE" 2>/dev/null \
+    | grep -Eo '\b(top|left|right|bottom|width|height|margin[a-z-]*):' | sort -u | head -5 || true)"
+  if [ -z "$layout_anim" ]; then
+    ok "动画没有作用于布局属性（只用 transform / opacity）"
+  else
+    bad "动画触及布局属性（会触发重排）：$(printf '%s' "$layout_anim" | tr '\n' ' ')"
+  fi
+
+  # 5) 骨架必须把两个属性、三个装饰层与两个控件挂到每个页面
+  shell_missing=""
+  for t in $TEMPLATES; do
+    [ -f "$TPL/$t.html" ] || continue
+    if ! grep -q 'data-worldline' "$TPL/$t.html" \
+      || ! grep -q 'data-motion' "$TPL/$t.html" \
+      || ! grep -q 'sg-scanline' "$TPL/$t.html" \
+      || ! grep -q 'sg-particles' "$TPL/$t.html" \
+      || ! grep -q 'sg-glow' "$TPL/$t.html" \
+      || ! grep -q 'sg-worldline-toggle' "$TPL/$t.html" \
+      || ! grep -q 'sg-motion-toggle' "$TPL/$t.html"; then
+      shell_missing="$shell_missing $t"
+    fi
+  done
+  if [ -z "$shell_missing" ]; then
+    ok "全部路由模板都挂载了世界线/动效属性、装饰层与切换控件"
+  else
+    bad "以下模板缺少交互层挂载点:$shell_missing"
+  fi
+
+  if grep -q 'sg-divergence' "$TPL/index.html" && grep -q 'data-value=' "$TPL/index.html"; then
+    ok "首页含 Divergence Meter 挂载点与服务端初值"
+  else
+    bad "首页缺少 Divergence Meter 挂载点或 data-value 初值"
+  fi
+
+  # 6) JS 里写死的 sg-* 类名必须真的存在于样式表或模板中。
+  #    这条断言来自一次真实事故：divergence.ts 用 sg-divergence__digit 渲染单元，
+  #    而 CSS 已经改名成 sg-divergence-digit，结果首屏 JS 一执行，辉光管就变成裸文字。
+  #    静态检查看的是服务端响应体，抓不到 JS 改写后的 DOM，所以必须交叉核对源码。
+  js_classes="$(grep -ohE '"sg-[a-z0-9_-]+"' "$ROOT"/src/js/*.ts "$ROOT"/src/js/*.mjs 2>/dev/null \
+    | tr -d '"' | sort -u || true)"
+  orphan_classes=""
+  for cls in $js_classes; do
+    # 这两个是 localStorage 键名，不是类名
+    case "$cls" in sg-worldline|sg-motion) continue ;; esac
+    grep -q "$cls" "$CSS_FILE" 2>/dev/null && continue
+    grep -rq "$cls" "$ROOT"/src/*.html "$ROOT"/src/partials/*.html "$ROOT"/src/error/*.html 2>/dev/null && continue
+    orphan_classes="$orphan_classes $cls"
+  done
+  if [ -z "$orphan_classes" ]; then
+    ok "JS 引用的 sg-* 类名都能在样式表或模板里找到"
+  else
+    bad "以下类名只出现在 JS 里（样式或标记里不存在）:$orphan_classes"
+  fi
+
+  # 6) 五项设置项与合法默认值
+  missing_setting=""
+  for key in worldline_default plain_mode_default divergence_source effects_particles effects_pointer_glow; do
+    grep -q "name: $key" "$SETTINGS" 2>/dev/null || missing_setting="$missing_setting $key"
+  done
+  if [ -z "$missing_setting" ]; then
+    ok "设置项齐备（世界线/简洁模式/数据源/粒子/鼠标辉光）"
+  else
+    bad "缺少设置项:$missing_setting"
+  fi
+
+  defaults_ok=1
+  grep -A6 'name: worldline_default' "$SETTINGS" 2>/dev/null | grep -q 'value: beta' || defaults_ok=0
+  grep -A6 'name: plain_mode_default' "$SETTINGS" 2>/dev/null | grep -q 'value: false' || defaults_ok=0
+  grep -A6 'name: divergence_source' "$SETTINGS" 2>/dev/null | grep -q 'value: attractor' || defaults_ok=0
+  grep -A6 'name: effects_particles' "$SETTINGS" 2>/dev/null | grep -q 'value: true' || defaults_ok=0
+  grep -A6 'name: effects_pointer_glow' "$SETTINGS" 2>/dev/null | grep -q 'value: true' || defaults_ok=0
+  if [ "$defaults_ok" -eq 1 ]; then
+    ok "设置项默认值合法（β / 动效开 / attractor / 粒子开 / 辉光开）"
+  else
+    bad "设置项默认值不符合预期（期望 beta / false / attractor / true / true）"
+  fi
+fi
+
 # ── 主题开发说明 ──────────────────────────────────────────
 if [ "$DO_DOCS" -eq 1 ]; then
   head_ "主题开发说明"
@@ -259,7 +394,7 @@ if [ "$DO_DOCS" -eq 1 ]; then
   fi
 
   if [ -f "$README" ]; then
-    for section in "构建" "打包" "安装到本地 Halo" "新增页面模板" "新增配色 token" "人工走查清单"; do
+    for section in "构建" "打包" "安装到本地 Halo" "新增页面模板" "新增配色 token" "组件与开关" "人工走查清单"; do
       if grep -q "^#\{1,3\} .*$section" "$README"; then
         ok "说明含章节：$section"
       else

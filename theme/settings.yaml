@@ -13,3 +13,41 @@ spec:
           value: ""
           placeholder: "留空则不显示"
           help: "显示在版权声明下方的自定义一行，例如建站时间或联系方式。"
+    - group: interaction
+      label: 交互与动效
+      formSchema:
+        - $formkit: select
+          name: worldline_default
+          label: 默认世界线
+          value: beta
+          options:
+            - label: β 世界线（暖色，默认）
+              value: beta
+            - label: α 世界线（冰蓝）
+              value: alpha
+          help: "访客没有保存过选择时使用；访客手动切换后以访客的选择为准。"
+        - $formkit: checkbox
+          name: plain_mode_default
+          label: 默认开启简洁模式
+          value: false
+          help: "开启后扫描线、粒子、打字机与滚动数字等动效默认全部关闭，访客仍可在导航栏自行打开。"
+        - $formkit: select
+          name: divergence_source
+          label: Divergence Meter 数据源
+          value: attractor
+          options:
+            - label: 世界线变动率 1.048596%
+              value: attractor
+            - label: 站点真实文章数
+              value: live
+          help: "访客数、评论数等真实统计要等接入 umami 之后才会提供。"
+        - $formkit: checkbox
+          name: effects_particles
+          label: 背景粒子
+          value: true
+          help: "关闭后不再创建 Canvas 星空层，可省电。"
+        - $formkit: checkbox
+          name: effects_pointer_glow
+          label: 鼠标跟随辉光
+          value: true
+          help: "触屏设备与窄屏自动禁用，无需手动关闭。"

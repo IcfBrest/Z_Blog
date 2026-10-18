@@ -4,6 +4,7 @@
 #   bash theme/verify/preview-test.sh            # 验证后停站（保留数据）
 #   bash theme/verify/preview-test.sh --keep     # 验证后保持容器运行
 #   bash theme/verify/preview-test.sh --purge    # 验证后停站并删除数据卷与 deploy/data
+#   bash theme/verify/preview-test.sh --reset    # 验证前先重建实例（同名同版本改模板后必须这样跑）
 #
 # 环境变量：BASE_URL / HALO_ADMIN_USER / HALO_ADMIN_PASS / HALO_ADMIN_EMAIL / HALO_SITE_TITLE
 #
@@ -30,6 +31,7 @@ SITE_TITLE="${HALO_SITE_TITLE:-世界线观测站}"
 
 KEEP=0
 PURGE=0
+RESET=0
 
 usage() {
   sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
@@ -39,6 +41,7 @@ for arg in "$@"; do
   case "$arg" in
     --keep) KEEP=1 ;;
     --purge) PURGE=1 ;;
+    --reset) RESET=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "未知参数：$arg" >&2; usage >&2; exit 2 ;;
   esac
@@ -66,7 +69,14 @@ command -v docker >/dev/null 2>&1 || { echo "缺少 docker CLI" >&2; exit 3; }
 docker info >/dev/null 2>&1 || { echo "Docker 守护进程不可达" >&2; exit 3; }
 ok "Docker 守护进程可用"
 
-ZIP="$(ls "$THEME_ROOT"/dist/*.zip 2>/dev/null | head -1 || true)"
+THEME_NAME="$(sed -n 's/^  name: *//p' "$THEME_ROOT/theme.yaml" 2>/dev/null | tr -d '\r' | head -1)"
+THEME_VERSION="$(sed -n 's/^  version: *//p' "$THEME_ROOT/theme.yaml" 2>/dev/null | tr -d '\r' | head -1)"
+ZIP="$THEME_ROOT/dist/${THEME_NAME}-${THEME_VERSION}.zip"
+if [ ! -f "$ZIP" ]; then
+  # 版本号对不上（例如忘了改 theme.yaml）时退回最新的 zip，避免误用旧版本包。
+  # 不能用 ls | head -1：它按字典序，1.0.0 会排在 1.1.0 前面。
+  ZIP="$(ls -t "$THEME_ROOT"/dist/*.zip 2>/dev/null | head -1 || true)"
+fi
 if [ -z "$ZIP" ]; then
   echo "缺少主题包 $THEME_ROOT/dist/*.zip" >&2
   echo "请先在 theme/ 下执行：pnpm install && pnpm build" >&2
@@ -79,26 +89,71 @@ ok "openssl 可用（$(openssl version | cut -d' ' -f1-2)）"
 
 compose() { docker compose -f "$COMPOSE_BASE" "$@"; }
 
+# deploy/data 里的文件由容器以 root 创建，Windows 宿主上的普通 rm -rf 会逐个报
+# "Permission denied" 而留下残骸（主题目录留在那里，下次就会装上旧模板）。
+# 因此优先用一次性 root 容器删除，再退化为普通 rm。
+remove_data_dir() {
+  dir="$1"
+  [ -d "$dir" ] || return 0
+  docker run --rm -v "$dir:/data" alpine:3.20 sh -c 'rm -rf /data/halo2 /data/caddy' >/dev/null 2>&1 || true
+  rm -rf "$dir" 2>/dev/null || true
+  rmdir "$dir" 2>/dev/null || true
+}
+
+# ── 可选：重建实例 ───────────────────────────────────────
+if [ "$RESET" -eq 1 ]; then
+  step "0/6 重建实例"
+  if [ -z "$REPO_ROOT" ] || [ ! -d "$REPO_ROOT/deploy" ]; then
+    bad "无法确认仓库根目录（REPO_ROOT=${REPO_ROOT:-<空>}），拒绝执行删除"
+    fail_out
+  fi
+  compose down -v >/dev/null 2>&1 || true
+  remove_data_dir "$REPO_ROOT/deploy/data"
+  if [ -d "$REPO_ROOT/deploy/data/halo2" ]; then
+    bad "deploy/data 未能清空，旧主题会干扰本次验证"
+    fail_out
+  fi
+  ok "已删除数据库命名卷与 deploy/data（下一次运行会重新初始化）"
+fi
+
 # ── 起站 ─────────────────────────────────────────────────
 step "1/6 拉起服务"
-# 全新数据卷时 halodb 首次初始化较慢，且刚删掉 deploy/data 后第一次 up 偶尔只把 halo
-# 容器建出来而不启动（状态停在 Created）；两种情况 compose 都会返回非零。
-# 因此重试几次，最终以健康检查为准。
-attempt=1
-up_ok=0
-while [ "$attempt" -le 3 ]; do
-  if compose up -d >/dev/null 2>&1; then
-    up_ok=1
-    break
+# 分两步起：全新数据卷上 halodb 的 initdb 要十几秒，直接 `up -d` 整体拉起时
+# compose 判定依赖未就绪，只把 halo「创建」出来（状态停在 Created）就返回非零，
+# 而且之后重复 `up -d` 也不会把它真正启动（实测空等 300s）。所以先单独等数据库
+# 健康，再起 halo。
+compose up -d halodb >/dev/null 2>&1 || true
+db_ok=0
+for _ in $(seq 1 60); do
+  db_cid="$(compose ps -q halodb 2>/dev/null | head -1 || true)"
+  if [ -n "$db_cid" ]; then
+    db_status="$(docker inspect -f '{{.State.Health.Status}}' "$db_cid" 2>/dev/null || echo unknown)"
+    if [ "$db_status" = "healthy" ]; then
+      db_ok=1
+      break
+    fi
   fi
-  note "compose up -d 第 $attempt 次返回非零，5 秒后重试"
-  attempt=$((attempt + 1))
-  sleep 5
+  sleep 2
 done
-if [ "$up_ok" -eq 1 ]; then
-  ok "compose up -d 已提交（第 $attempt 次）"
+[ "$db_ok" -eq 1 ] || { bad "halodb 未在 120s 内变为 healthy"; fail_out; }
+ok "数据库已就绪（halodb healthy）"
+
+if compose up -d halo >/dev/null 2>&1; then
+  ok "compose up -d halo 已提交"
 else
-  note "compose up -d 连续返回非零，改由健康检查判定"
+  note "compose up -d halo 返回非零，改由健康检查判定"
+fi
+
+# 兜底：容器可能停在 Created（有容器但未运行），强制重建一次才会真正启动。
+halo_cid="$(compose ps -q halo 2>/dev/null | head -1 || true)"
+running="false"
+if [ -n "$halo_cid" ]; then
+  running="$(docker inspect -f '{{.State.Running}}' "$halo_cid" 2>/dev/null || echo false)"
+fi
+if [ "$running" != "true" ]; then
+  note "halo 容器未运行（停在 Created），强制重建启动"
+  if [ -n "$halo_cid" ]; then docker start "$halo_cid" >/dev/null 2>&1 || true; fi
+  compose up -d --no-deps --force-recreate halo >/dev/null 2>&1 || true
 fi
 
 ready=0
@@ -224,7 +279,33 @@ install_code="$(curl -s -D "$TMP/install.hdr" -b "$JAR" -c "$JAR" -o "$BODY" -w 
   "$BASE_URL/apis/api.console.halo.run/v1alpha1/themes/install")"
 case "$install_code" in
   200) ok "主题安装成功（$THEME_NAME）" ;;
-  400|409) note "主题已存在或版本相同（HTTP $install_code），继续尝试激活" ;;
+  400|409)
+    # 同名主题一旦装过，Halo 就拒绝再次安装（哪怕版本号变了）。此时先比对已装版本：
+    # 与本次构建一致才继续，否则继续激活只会验证上一次留下的旧产物 —— M2 就踩过：
+    # 脚本断言的是 1.1.0 的包，容器里跑的还是 1.0.0，页面上什么新东西都没有。
+    # 已装版本直接从 Halo 主题目录里的 theme.yaml 读：比解析 console API 的
+    # 列表 JSON 稳（字段顺序与嵌套层级都不可控，M2 实测抓不到 spec.version）。
+    # 必须 tr -d '\r'：仓库里只有 *.sh 与 Caddyfile 强制 LF，theme.yaml 在 Windows
+    # 检出/打包后是 CRLF，带 \r 的版本号永远比不相等。
+    installed="$(sed -n 's/^  version: *//p' \
+      "$REPO_ROOT/deploy/data/halo2/themes/$THEME_NAME/theme.yaml" 2>/dev/null \
+      | tr -d '\r' | head -1)"
+    installed_sum="$(sha256sum \
+      "$REPO_ROOT/deploy/data/halo2/themes/$THEME_NAME/templates/index.html" 2>/dev/null \
+      | cut -d' ' -f1)"
+    built_sum="$(sha256sum "$THEME_ROOT/templates/index.html" 2>/dev/null | cut -d' ' -f1)"
+    # 版本号相同还不够：同一版本反复重建时，装上去的可能仍是上一次的产物。
+    # 只有模板逐字节一致时才认为「容器里跑的就是这次构建」。
+    if [ -n "$installed_sum" ] && [ "$installed" = "$THEME_VERSION" ] \
+      && [ "$installed_sum" = "$built_sum" ]; then
+      ok "主题 $THEME_NAME $THEME_VERSION 已在容器内且与本次构建一致，跳过安装"
+    else
+      bad "主题 $THEME_NAME 已存在（已装 ${installed:-未知}，本次构建 $THEME_VERSION，模板${installed_sum:+与本地不一致}）"
+      note "Halo 没有主题升级接口，请重建实例后重跑："
+      note "  bash theme/verify/preview-test.sh --reset --keep"
+      fail_out
+    fi
+    ;;
   *)
     bad "主题安装失败（HTTP $install_code）"
     sed -n '1,12p' "$TMP/install.hdr" | sed 's/^/      /'
@@ -233,18 +314,31 @@ case "$install_code" in
     ;;
 esac
 
-activate_code="$(curl -s -D "$TMP/act.hdr" -b "$JAR" -c "$JAR" -o "$BODY" -w '%{http_code}' -X PUT \
-  -H "X-XSRF-TOKEN: $xsrf" \
-  -H 'Accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{}' \
-  "$BASE_URL/apis/api.console.halo.run/v1alpha1/themes/$THEME_NAME/activation")"
+# 激活会让 Halo 重新加载模板，实测偶发连接被直接掐断（curl 得到 HTTP 000），
+# 因此对 000 与 5xx 重试几次，其余状态码直接判定。
+activate_code="000"
+for attempt in 1 2 3; do
+  : > "$TMP/act.json"
+  activate_code="$(curl -s -D "$TMP/act.hdr" -b "$JAR" -c "$JAR" -o "$TMP/act.json" -w '%{http_code}' -X PUT \
+    -H "X-XSRF-TOKEN: $xsrf" \
+    -H 'Accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{}' \
+    "$BASE_URL/apis/api.console.halo.run/v1alpha1/themes/$THEME_NAME/activation")"
+  case "$activate_code" in
+    200|204) break ;;
+    000|500|502|503|504)
+      [ "$attempt" -lt 3 ] && { note "激活返回 HTTP $activate_code，3 秒后重试（第 $attempt 次）"; sleep 3; }
+      ;;
+    *) break ;;
+  esac
+done
 if [ "$activate_code" = "200" ] || [ "$activate_code" = "204" ]; then
   ok "主题已激活（$THEME_NAME）"
 else
   bad "主题激活失败（HTTP $activate_code）"
   sed -n '1,12p' "$TMP/act.hdr" | sed 's/^/      /'
-  head -c 300 "$BODY" 2>/dev/null | sed 's/^/      /'; echo
+  head -c 300 "$TMP/act.json" 2>/dev/null | sed 's/^/      /'; echo
   fail_out
 fi
 
@@ -279,6 +373,58 @@ probe "/tags" "sg-chip-list" "标签"
 probe "/authors/$ADMIN_USER" "sg-hero" "作者"
 probe "/posts/__sg_preview_missing__" "sg-error" "错误页"
 
+# ── 交互层断言（组件都在首屏，只查首页） ────────────────
+step "5b/6 交互组件"
+
+curl -s -H 'Accept: text/html,application/xhtml+xml' -o "$BODY" "$BASE_URL/"
+
+has() {
+  local needle="$1" label="$2"
+  if grep -qF -- "$needle" "$BODY"; then
+    ok "$label"
+  else
+    bad "$label（首屏缺少 $needle）"
+  fi
+}
+
+# 默认值来自 settings.yaml：worldline_default=beta、plain_mode_default 未开、
+# divergence_source=attractor（初值 1.048596%）。
+has 'data-worldline="beta"' "世界线默认 beta（服务端直出）"
+has 'data-motion="on"' "简洁模式默认关闭（动效默认开）"
+has 'sg-scanline' "CRT 扫描线层"
+has 'sg-particles' "星空粒子层"
+has 'sg-glow' "鼠标辉光层"
+has 'id="sg-worldline-toggle"' "世界线切换控件"
+has 'id="sg-motion-toggle"' "简洁模式控件"
+has 'class="sg-divergence"' "Divergence Meter 挂载点"
+
+# 数值必须是服务端直出的六位小数，这样禁用脚本时也对
+if grep -q 'data-value="1.048596"' "$BODY"; then
+  ok "辉光管初值 1.048596（data-value 直出）"
+else
+  bad "辉光管初值不是 1.048596（检查 divergence_source 默认值）"
+fi
+if grep -q 'sg-divergence-digit' "$BODY" && grep -q 'sg-divergence__percent' "$BODY"; then
+  ok "辉光管已按位拆分成数字单元与百分号"
+else
+  bad "辉光管未按位拆分（缺少 digit / percent 单元）"
+fi
+
+# 交互层的 JS 与 CSS 必须真的能取到 200，否则页面看着正常但按钮全无反应
+assets="$(grep -Eo '/themes/[^"]+\.(js|css)' "$BODY" | sort -u || true)"
+if [ -z "$assets" ]; then
+  bad "首屏没有引用任何主题静态资源"
+else
+  for asset in $assets; do
+    code="$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL$asset")"
+    if [ "$code" = "200" ]; then
+      ok "静态资源 200：$asset"
+    else
+      bad "静态资源返回 HTTP $code：$asset"
+    fi
+  done
+fi
+
 # ── 清理 ─────────────────────────────────────────────────
 step "6/6 清理"
 
@@ -291,7 +437,7 @@ elif [ "$PURGE" -eq 1 ]; then
     fail_out
   fi
   compose down -v >/dev/null 2>&1 || true
-  rm -rf "$REPO_ROOT/deploy/data"
+  remove_data_dir "$REPO_ROOT/deploy/data"
   rm -f "$REPO_ROOT/deploy/.env"
   ok "已 down -v 并删除命名卷、deploy/data 与 deploy/.env"
 else

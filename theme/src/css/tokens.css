@@ -3,7 +3,7 @@
  *
  * 任何组件样式都不得写死色值，只能引用本文件里的变量：
  * 上半部分是原始 token（DR-1 直接规定），下半部分是语义层（组件只认这一层）。
- * M2 做 α/β 世界线切换时，只需在语义层重新映射，不必改动任何组件。
+ * 世界线切换只在语义层重新映射，不改动任何组件。
  */
 
 :root {
@@ -23,6 +23,12 @@
   --sg-text-dim: #9aa4b2;
   --sg-border: rgba(0, 255, 65, 0.16);
   --sg-nixie-glow: rgba(255, 149, 0, 0.35);
+  --sg-alpha-dim: #2f7d9e;
+  --sg-beta-dim: #b8483a;
+  --sg-alpha-border: rgba(79, 195, 247, 0.18);
+  --sg-beta-border: rgba(255, 109, 90, 0.18);
+  --sg-scanline: rgba(0, 255, 65, 0.055);
+  --sg-glow: rgba(255, 149, 0, 0.1);
 
   /* ── 语义层（组件只引用这一层）────────────────────────── */
   --bg: var(--sg-bg);
@@ -38,17 +44,68 @@
   --link: var(--sg-green);
   --focus: var(--sg-nixie);
 
+  /* 终端绿：不随世界线变化，用于品牌标记与辉光等身份特征 */
+  --term: var(--sg-green);
+  --term-dim: var(--sg-green-dim);
+
+  /* CRT 装饰层用色 */
+  --scanline: var(--sg-scanline);
+  --glow: var(--sg-glow);
+
   /* ── 排版与节奏（非颜色）────────────────────────────── */
   --font-display: "Orbitron", "Noto Sans SC", sans-serif;
   --font-body: "JetBrains Mono", "Noto Sans SC", monospace;
   --container: 46rem;
   --radius: 2px;
   --gap: 1.5rem;
+
+  /* ── 动效时长：所有过渡与动画只能引用这几个变量 ──────────── */
+  --motion-fast: 120ms;
+  --motion-base: 240ms;
+  --motion-slow: 600ms;
+  --motion-loop: 8s;
+  --motion-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-/* 世界线 B 占位：M2 会按设置切到 β 世界线，这里先保留结构 */
+/*
+ * β 世界线（默认）：暖色强调，最接近硬核 CRT 的琥珀/橙红观感。
+ * 属性由 layout 输出，取值来自主题设置项 worldline_default。
+ */
 :root[data-worldline="beta"] {
   --accent: var(--sg-beta);
+  --accent-dim: var(--sg-beta-dim);
   --link: var(--sg-beta);
-  --border: var(--sg-beta);
+  --border: var(--sg-beta-border);
+}
+
+/* α 世界线：冰蓝强调 */
+:root[data-worldline="alpha"] {
+  --accent: var(--sg-alpha);
+  --accent-dim: var(--sg-alpha-dim);
+  --link: var(--sg-alpha);
+  --border: var(--sg-alpha-border);
+}
+
+/*
+ * 简洁模式：把全部时长归零；扫描线与粒子层在 main.css 里直接隐藏。
+ * 单点关闭，避免每个组件各自判断开关。
+ */
+:root[data-motion="off"] {
+  --motion-fast: 0ms;
+  --motion-base: 0ms;
+  --motion-slow: 0ms;
+  --motion-loop: 0ms;
+}
+
+/*
+ * 系统偏好减少动效：除非访客在本站手动打开过动效（boot 脚本会写
+ * data-motion-source="user"），否则同样归零。
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion-source="user"]) {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+    --motion-loop: 0ms;
+  }
 }

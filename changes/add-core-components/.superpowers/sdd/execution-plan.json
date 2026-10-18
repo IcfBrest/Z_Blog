@@ -1,0 +1,34 @@
+{
+  "mode": "inline",
+  "source": "approved-plan",
+  "rationale": "实现完成：勾选 13 个任务，并把端到端验证暴露的三处真实缺陷（Thymeleaf __ 预处理、同名重复安装不更新模板、全新卷 compose 只建不启）记入 design.md 已知事实",
+  "waves": [
+    {
+      "id": "implementation",
+      "strategy": "serial",
+      "tasks": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "2.5",
+        "3.1",
+        "3.2",
+        "3.3"
+      ],
+      "depends_on": []
+    }
+  ],
+  "artifacts_hash": "sha256:99facdfb89f9f7c11804f55d00d515f9ee9199005edbf8499854eb0a1fafb244",
+  "contract_hash": null,
+  "workflow": "full",
+  "revision": 2,
+  "schema_version": 2,
+  "review_policy": "final",
+  "hash": "sha256:010d36373a03ca4f20ef99b226dc208e418ccdb784c87fc73dededa7060b11b1"
+}
