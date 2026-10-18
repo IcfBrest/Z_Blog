@@ -1,0 +1,6 @@
+{
+  "previous_plan_hash": "sha256:e70dad2f72950b4a6d8266bd1a9e200b635bf9c89c5006584883641bb18c5ae3",
+  "previous_revision": 1,
+  "reason": "实现完成：勾选全部 14 个任务；把端到端验证暴露的事实补进 design.md（造数据端点与状态码、文章/分类访问路径、Halo 自带「默认分类」）；修正 page.html 的 about/friends 外壳互斥与横幅 classappend 的多余空格",
+  "evidence": "scope changed: passing evidence invalidated; failures retained"
+}

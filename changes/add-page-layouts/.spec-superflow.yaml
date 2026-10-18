@@ -10,7 +10,7 @@ completion_reason: null
 revision: null
 
 # === Hashes (fast staleness detection) ===
-artifacts_hash: sha256:9237f7cfa03a9661b3b9cd17427f317ed5a2f73ea496872b1b3d99a71e126823
+artifacts_hash: sha256:8c8256b26cb976f11e7c9c7f25b0c350fbb79d2f724fd0a2e006b3be4aface5e
 contract_hash: null
 
 # === Execution progress ===
@@ -19,12 +19,12 @@ execution_plan_hash: null
 execution_plan_revision: null
 batches_completed: 0
 test_result: null
-spec_merged: false
-spec_publication_receipt: null
+spec_merged: true
+spec_publication_receipt: eyJ2ZXJzaW9uIjoxLCJzb3VyY2VfaGFzaCI6InNoYTI1NjozOTkwZWFjMjVmNDBhYjNmNzRkYTM5OTJhZTUwODBhNjM0NTMyZDNlMDgxOTg5ZTQ3ZjI4YWE1ODVkOTVkMzc4IiwiYmFzZWxpbmVfYmVmb3JlX2hhc2giOiJzaGEyNTY6ZDQ3NWZlNTIxNGJjZTg3YmMyMzJmNWY2ZjFmZTlmY2JiNmJhOWE1NmFlYThjM2JkYjVhNzIxZDA3Yjg5ZGI4MSIsImJhc2VsaW5lX2FmdGVyX2hhc2giOiJzaGEyNTY6NTcyOTRiMTE0OWM0ZTk5ZjVjNmFhODVkZjFkMzkxNzI5ZmI2ODAyYmY3MTY0NDI2NjE3OTg1Mjg1YjJhYTZmNyIsImNhcGFiaWxpdGllcyI6WyJ0aGVtZS1wYWdlcyJdfQ
 
 # === Metadata ===
 change_name: add-page-layouts
-last_transition: 2026-10-18T08:28:18.367Z
+last_transition: 2026-10-18T11:58:25.406Z
 last_transition_from: null
 last_transition_to: null
 
