@@ -10,7 +10,7 @@ completion_reason: null
 revision: null
 
 # === Hashes (fast staleness detection) ===
-artifacts_hash: sha256:c7421649a1380277881affa6e4468a4490bd64c566152fc29e4517523f172b32
+artifacts_hash: sha256:99facdfb89f9f7c11804f55d00d515f9ee9199005edbf8499854eb0a1fafb244
 contract_hash: null
 
 # === Execution progress ===
@@ -24,7 +24,7 @@ spec_publication_receipt: null
 
 # === Metadata ===
 change_name: add-core-components
-last_transition: 2026-10-18T05:16:08.856Z
+last_transition: 2026-10-18T06:56:42.365Z
 last_transition_from: null
 last_transition_to: null
 

@@ -338,6 +338,26 @@ if [ "$DO_COMPONENTS" -eq 1 ]; then
     bad "首页缺少 Divergence Meter 挂载点或 data-value 初值"
   fi
 
+  # 6) JS 里写死的 sg-* 类名必须真的存在于样式表或模板中。
+  #    这条断言来自一次真实事故：divergence.ts 用 sg-divergence__digit 渲染单元，
+  #    而 CSS 已经改名成 sg-divergence-digit，结果首屏 JS 一执行，辉光管就变成裸文字。
+  #    静态检查看的是服务端响应体，抓不到 JS 改写后的 DOM，所以必须交叉核对源码。
+  js_classes="$(grep -ohE '"sg-[a-z0-9_-]+"' "$ROOT"/src/js/*.ts "$ROOT"/src/js/*.mjs 2>/dev/null \
+    | tr -d '"' | sort -u || true)"
+  orphan_classes=""
+  for cls in $js_classes; do
+    # 这两个是 localStorage 键名，不是类名
+    case "$cls" in sg-worldline|sg-motion) continue ;; esac
+    grep -q "$cls" "$CSS_FILE" 2>/dev/null && continue
+    grep -rq "$cls" "$ROOT"/src/*.html "$ROOT"/src/partials/*.html "$ROOT"/src/error/*.html 2>/dev/null && continue
+    orphan_classes="$orphan_classes $cls"
+  done
+  if [ -z "$orphan_classes" ]; then
+    ok "JS 引用的 sg-* 类名都能在样式表或模板里找到"
+  else
+    bad "以下类名只出现在 JS 里（样式或标记里不存在）:$orphan_classes"
+  fi
+
   # 6) 五项设置项与合法默认值
   missing_setting=""
   for key in worldline_default plain_mode_default divergence_source effects_particles effects_pointer_glow; do

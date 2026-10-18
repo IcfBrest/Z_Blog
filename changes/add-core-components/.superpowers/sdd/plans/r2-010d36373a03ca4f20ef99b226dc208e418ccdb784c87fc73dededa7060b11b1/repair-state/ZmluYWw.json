@@ -1,0 +1,24 @@
+{
+  "plan_hash": "sha256:010d36373a03ca4f20ef99b226dc208e418ccdb784c87fc73dededa7060b11b1",
+  "plan_revision": 2,
+  "wave_id": "final",
+  "status": "repairing",
+  "failure_count": 1,
+  "previous_head": "96ac0cb34e77d18350de24213ae06efb562ab297",
+  "previous_report": ".superpowers\\sdd\\reviews\\snapshots\\9dbd5dae-0c9a-42a4-b1e1-1c714d0f0d4e.md",
+  "failures": [
+    {
+      "status": "fail",
+      "issue": "I-1",
+      "base": "5c5b5d0fdf0c6612ebef412417014ea279e619e9",
+      "head": "96ac0cb34e77d18350de24213ae06efb562ab297",
+      "report": ".superpowers\\sdd\\reviews\\snapshots\\9dbd5dae-0c9a-42a4-b1e1-1c714d0f0d4e.md",
+      "report_sha256": "sha256:4099f50bfd130fe590fb200a3bf2e55bc2f7aa645a4acd880879b9812cf07ad8",
+      "plan_hash": "sha256:010d36373a03ca4f20ef99b226dc208e418ccdb784c87fc73dededa7060b11b1",
+      "plan_revision": 2,
+      "wave_id": "final",
+      "recorded_at": "2026-10-18T07:41:23.488Z"
+    }
+  ],
+  "updated_at": "2026-10-18T07:41:23.491Z"
+}

@@ -37,8 +37,10 @@ export function initDivergence(): void {
     const fragment = document.createDocumentFragment();
     for (const unit of padDigits(text)) {
       const span = document.createElement("span");
-      if (unit.type === "digit") span.className = "sg-divergence__digit";
-      else if (unit.type === "dot") span.className = "sg-divergence__dot";
+      // 类名必须与 main.css 的单横线选择器一致：BEM 的双下划线在 Thymeleaf 里是
+      // 表达式预处理分隔符，模板层面已经改名为 -digit / -dot，这里不能再用 __。
+      if (unit.type === "digit") span.className = "sg-divergence-digit";
+      else if (unit.type === "dot") span.className = "sg-divergence-dot";
       else span.className = "sg-divergence__percent";
       span.textContent = unit.value;
       fragment.appendChild(span);
