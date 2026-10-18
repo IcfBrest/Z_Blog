@@ -15,13 +15,16 @@
 | **M0** | 环境与部署底座（Halo + PostgreSQL + Caddy + Docker Compose、备份脚本、运维手册） | ✅ **已完成** |
 | **M1** | 主题骨架（theme-starter 工程、配色 tokens、基础布局、字体自托管） | ✅ **已完成** |
 | **M2** | 核心组件（Divergence Meter、CRT 动效、双主题切换、简洁模式） | ✅ **已完成** |
-| M3 | 页面铺开（首页 / 列表 / 详情 / 归档 / 关于 / 友链 / 404、D-Mail 密码解锁） | ⏳ 待开始 |
+| **M3a** | 页面铺开（首页世界线横幅、文章详情 CRT 终端 + D-Mail 元信息、归档时间轴、分类分支徽章、关于页成员卡、友链卡片、404 终端） | ✅ **已完成** |
+| M3b | D-Mail 密码解锁（Halo 2.27 的 `PostSpec` 没有密码字段，需先定方案） | ⏳ 待开始 |
 | M4 | 集成（Artalk 评论、搜索、看板娘、umami 统计、SEO） | ⏳ 待开始 |
 | M5 | 打磨与发布（性能优化、恢复演练、首发文章） | ⏳ 待开始 |
 
 > 主题 `z-blog-sg` 已能安装并渲染全部路由，M2 的交互层也已就位：世界线 α/β 双主题切换、Divergence Meter 辉光管（默认 `1.048596`，可切真实文章数）、CRT 扫描线/粒子/鼠标辉光/打字机、以及一键「简洁模式」。
 >
-> 动效默认开启，但遵循 `prefers-reduced-motion`；所有开关记在 localStorage（`sg-worldline` / `sg-motion`），Console 里另有五项默认值设置。浏览器端的视觉效果仍需人工走查确认（见 [theme/README.md](theme/README.md) 的走查清单）。
+> 动效默认开启，但遵循 `prefers-reduced-motion`；所有开关记在 localStorage（`sg-worldline` / `sg-motion`），Console 里另有八项设置（五项动效默认值 + 站长称呼 + 关于页 / 友链页的 slug）。浏览器端的视觉效果仍需人工走查确认（见 [theme/README.md](theme/README.md) 的走查清单）。
+>
+> M3a 把这套视觉语言铺到了每一类页面上：首页有按分类驱动的世界线 SVG 横幅，文章详情是带局部扫描线的 CRT 终端并附带「D-Mail 发送记录」元信息，归档换成竖向时间轴，分类总览渲染成带篇数的分支徽章，关于页给出「未来道具研究所」成员卡，友链页把正文列表变成卡片网格，404 是 CRT 错误终端加「未找到该世界线」。预览脚本现在会自己造分类、文章与页面，因此这些形态都能被端到端断言覆盖。
 
 ## 技术栈
 
@@ -53,11 +56,12 @@
 │   ├── verify/boot-test.sh                  #   真实起站 + 容器重建后数据留存验证
 │   ├── .env.example                         #   环境变量模板（真实 .env 不入库）
 │   └── README.md                            #   部署与运维手册
-├── theme/                                   # ★ M1/M2 交付：Steins;Gate 主题 z-blog-sg
-│   ├── src/                                 #   源码：tokens/main.css、partials/layout.html、10 个路由模板
+├── theme/                                   # ★ M1–M3a 交付：Steins;Gate 主题 z-blog-sg
+│   ├── src/                                 #   源码：tokens/main.css/pages.css、partials/layout.html、10 个路由模板
 │   ├── src/js/                              #   M2 交互层：worldline / motion / divergence / typewriter / particles
-│   ├── verify/check-theme.sh                #   主题静态校验（tokens / 字体 / 布局 / 模板 / 组件 / 说明）
-│   ├── verify/preview-test.sh               #   本地预览验证：起站 → 初始化 → 装主题 → 路由与组件断言
+│   ├── src/partials/                        #   骨架、文章卡片、分页、世界线横幅、D-Mail 元信息
+│   ├── verify/check-theme.sh                #   主题静态校验（tokens / 字体 / 布局 / 模板 / 组件 / 页面 / 说明）
+│   ├── verify/preview-test.sh               #   端到端：起站 → 初始化 → 造数据 → 装主题 → 路由与结构断言
 │   ├── verify/unit-logic.mjs                #   交互层纯逻辑单测（世界线/简洁模式/辉光管格式化）
 │   ├── theme.yaml                           #   主题元信息（名称、版本、requires）
 │   └── README.md                            #   主题开发说明 + 组件与开关 + 人工走查清单
@@ -65,11 +69,13 @@
 ├── specs/                                   # 已发布的规格基线
 │   ├── deployment-baseline/spec.md          #   M0：5 条 Requirement / 9 个 Scenario
 │   ├── theme-foundation/spec.md             #   M1：主题基础能力
-│   └── theme-interaction/spec.md             #   M2：交互组件与开关
+│   ├── theme-interaction/spec.md            #   M2：交互组件与开关
+│   └── theme-pages/spec.md                  #   M3a：页面级结构与造数据
 └── changes/                                 # 变更档案（提案 / 任务 / 设计 / 审查报告）
     ├── add-halo-deploy-base/                #   M0
     ├── add-theme-skeleton/                  #   M1
-    └── add-core-components/                 #   M2
+    ├── add-core-components/                 #   M2
+    └── add-page-layouts/                    #   M3a
 ```
 
 ## 本地快速开始
@@ -98,7 +104,7 @@ docker compose -f deploy/docker-compose.yml down           # 停止（数据保�
 装上 Steins;Gate 主题：
 
 ```bash
-# 1. 构建主题包（产出 theme/dist/z-blog-sg-1.1.0.zip）
+# 1. 构建主题包（产出 theme/dist/z-blog-sg-1.2.0.zip）
 (cd theme && pnpm install && pnpm build)
 
 # 2. 一条命令完成 起站 → 初始化 → 安装 → 激活 → 路由与组件断言，并保留站点
@@ -126,9 +132,9 @@ docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml up
 bash deploy/verify/static-check.sh --all    # 静态校验：编排渲染、变量注入、手册章节、LF 换行符
 bash deploy/verify/boot-test.sh             # 真实起站：健康接口轮询 + 容器重建后数据留存
 bash deploy/backup/backup.sh --dry-run      # 备份脚本演练（不加 --dry-run 会真的产出转储）
-bash theme/verify/check-theme.sh --all      # 主题静态校验：tokens / 字体 / 布局 / 模板 / 组件 / 说明
+bash theme/verify/check-theme.sh --all      # 主题静态校验：tokens / 字体 / 布局 / 模板 / 组件 / 页面 / 说明
 node theme/verify/unit-logic.mjs            # 交互层纯逻辑单测
-bash theme/verify/preview-test.sh --keep    # 端到端：起站 → 初始化 → 装主题 → 路由与组件断言
+bash theme/verify/preview-test.sh --keep    # 端到端：起站 → 初始化 → 造数据 → 装主题 → 路由与结构断言
 ```
 
 > 交互层有两处只靠静态检查会漏掉的真实陷阱，已固化成断言：Thymeleaf 里 `__` 会被当作表达式预处理分隔符（类名、文本里出现就编译报错），以及 JS 里写死的类名必须与样式表一致（`check-theme.sh --components` 会交叉核对）。
@@ -145,9 +151,11 @@ bash theme/verify/preview-test.sh --keep    # 端到端：起站 → 初始化 �
 | [specs/deployment-baseline/spec.md](specs/deployment-baseline/spec.md) | M0 已发布的规格基线 |
 | [specs/theme-foundation/spec.md](specs/theme-foundation/spec.md) | M1 已发布的规格基线 |
 | [specs/theme-interaction/spec.md](specs/theme-interaction/spec.md) | M2 已发布的规格基线 |
+| [specs/theme-pages/spec.md](specs/theme-pages/spec.md) | M3a 已发布的规格基线 |
 | [changes/add-halo-deploy-base](changes/add-halo-deploy-base) | M0 变更档案：提案、任务、设计决策、代码审查报告 |
 | [changes/add-theme-skeleton](changes/add-theme-skeleton) | M1 变更档案：提案、任务、设计决策、代码审查报告 |
 | [changes/add-core-components](changes/add-core-components) | M2 变更档案：提案、任务、设计决策、代码审查报告 |
+| [changes/add-page-layouts](changes/add-page-layouts) | M3a 变更档案：提案、任务、设计决策、代码审查报告 |
 
 ## 设计约定
 
@@ -175,9 +183,10 @@ bash theme/verify/preview-test.sh --keep    # 端到端：起站 → 初始化 �
 - **恢复演练尚未真实执行过一次**：转储导入验证被本机命令安全策略拦下，步骤已写入运维手册，待人工执行一次。
 - **`registry.fit2cloud.com` 拉取可能停滞**：Docker Hub 上的 `halohub/halo:2.27.0` 与其同源同摘要，可通过 `.env` 里的 `HALO_IMAGE` 切换。
 - **域名、服务器、ICP 备案与线上真实部署尚未开始**（属于 M0 的范围外事项）。
-- **主题的视觉表现未做浏览器自动化**：断点、吸顶、焦点环、对比度、以及 M2 的动效观感（扫描线、粒子、辉光、打字机、辉光管滚动）按 [theme/README.md](theme/README.md) 的走查清单人工确认。端到端脚本断言的是服务端响应与静态资源，抓不到 JS 改写后的 DOM。
+- **主题的视觉表现未做浏览器自动化**：断点、吸顶、焦点环、对比度、以及 M2 的动效观感（扫描线、粒子、辉光、打字机、辉光管滚动）与 M3a 的页面形态（世界线横幅、CRT 终端、时间轴、成员/友链卡片）按 [theme/README.md](theme/README.md) 的走查清单人工确认。端到端脚本断言的是服务端响应结构与静态资源，抓不到 JS 改写后的 DOM。
 - **CI 未在 GitHub Actions 上实跑过**：本地用与 CI 相同的命令验证通过（`static-check.sh --all`、`check-theme.sh --all`）。
-- **主题只在空站点上验证过**：有内容时的分页、置顶、分类层级等形态待造数据验证（M3 铺开页面时会覆盖）。
+- **造的数据形态单一**：预览脚本只造 3 个分类、3 篇文章、2 个页面，且都是二级分类、无置顶、无子分类；更复杂的内容形态（多级分类、大量分页、草稿与私密文章）待后续补充。
+- **D-Mail 密码解锁（M3b）尚不可行**：Halo 2.27 的 `PostSpec` 没有密码字段（`visible` 只有 `PUBLIC/INTERNAL/PRIVATE`），主题层拿到的正文已是明文，遮不住；需要自研插件或改用密文方案，属独立立项。
 - **两个 `data-*` 属性语义上有小瑕疵**：`.sg-scanline` / `.sg-particles` 的 `data-enabled` 同时承载服务端设置与客户端开关，简洁模式关闭时属性存在但值为 `false`；样式已用 `:not([data-enabled="false"])` 兼容，但读 DOM 时容易误解。
 
 ## 版权
@@ -187,4 +196,4 @@ bash theme/verify/preview-test.sh --keep    # 端到端：起站 → 初始化 �
 
 ---
 
-本仓库的变更使用 [spec-superflow](https://github.com/MageByte-Zero/spec-superflow) 的 planned 流程推进：提案 → 任务 → 设计 → 实现 → 审查 → 归档，全过程留痕在 `changes/` 与 `specs/` 中。已完成 M0（`add-halo-deploy-base`）、M1（`add-theme-skeleton`）与 M2（`add-core-components`）。
+本仓库的变更使用 [spec-superflow](https://github.com/MageByte-Zero/spec-superflow) 的 planned 流程推进：提案 → 任务 → 设计 → 实现 → 审查 → 归档，全过程留痕在 `changes/` 与 `specs/` 中。已完成 M0（`add-halo-deploy-base`）、M1（`add-theme-skeleton`）、M2（`add-core-components`）与 M3a（`add-page-layouts`）。
