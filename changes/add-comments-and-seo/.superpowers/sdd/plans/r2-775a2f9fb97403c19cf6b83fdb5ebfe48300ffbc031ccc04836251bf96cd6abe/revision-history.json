@@ -1,0 +1,6 @@
+{
+  "previous_plan_hash": "sha256:121a0d0eaad732e8009250185637ad39e044b49483368ef2b74f866c35b7c1f4",
+  "previous_revision": 1,
+  "reason": "实现完成：勾选全部 14 个任务，并把实施期实测事实补进 design.md（Artalk 前端无 siteKey、容器配置生成方式、SPA 相对路径需 handle_path 剥前缀、独立页面须 allowComment:true、注释里的字面量标签会进产物、site.url 为空时 canonical 不输出），同时按实际实现订正 2.x/3.x 的任务措辞（设置项改为 comments_enabled/comments_server/comments_site_name，去掉 halo provider 分支）",
+  "evidence": "scope changed: passing evidence invalidated; failures retained"
+}

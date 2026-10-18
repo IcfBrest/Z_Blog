@@ -1,0 +1,22 @@
+<!-- 评论区：Artalk（RINE 频道）。本片段只输出挂载点与配置，渲染由 js/comments.ts 完成。 -->
+<aside
+  class="sg-comments"
+  th:with="
+    sgOn=${theme.config.integration.comments_enabled == null ? true : theme.config.integration.comments_enabled},
+    sgServer=${theme.config.integration.comments_server},
+    sgSite=${theme.config.integration.comments_site_name},
+    sgServerUrl=${#strings.isEmpty(sgServer) ? '/artalk' : sgServer},
+    sgSiteName=${#strings.isEmpty(sgSite) ? site.title : sgSite},
+    sgAllow=${sgOn and haloCommentEnabled}"
+>
+  <section
+    th:if="${sgAllow}"
+    id="sg-comments"
+    class="sg-comments__mount"
+    th:attr="data-server=${sgServerUrl},data-site=${sgSiteName}"
+  >
+    <p class="sg-comments__hint">正在接入 RINE 频道……</p>
+  </section>
+
+  <p th:unless="${sgAllow}" class="sg-comments__off">评论已关闭。</p>
+</aside>

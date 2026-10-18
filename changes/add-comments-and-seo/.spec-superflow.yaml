@@ -1,0 +1,63 @@
+# .spec-superflow.yaml — lightweight state machine
+# Progress and legacy approvals. Recover missing evidence; never infer approval from artifact existence.
+
+# === Core state ===
+state: closing
+workflow: full
+workflow_variant: planned
+completion_outcome: verified
+completion_reason: null
+revision: null
+
+# === Hashes (fast staleness detection) ===
+artifacts_hash: sha256:1984bff18a738048aa751b9be54adb012cb134b5b8abd19f9757a81fdb64f4ad
+contract_hash: null
+
+# === Execution progress ===
+execution_mode: null
+execution_plan_hash: null
+execution_plan_revision: null
+batches_completed: 0
+test_result: pass: bash deploy/verify/static-check.sh --all && bash theme/verify/check-theme.sh --all
+spec_merged: true
+spec_publication_receipt: eyJ2ZXJzaW9uIjoxLCJzb3VyY2VfaGFzaCI6InNoYTI1NjpiNzU1MWM0NjUwYmFiNjA5ODNiMjkzNDgwN2EyZTU3MWVhY2M0NGI5YmM5Njg1OTRmYjJhYzUyYzQ0OWFlNWU3IiwiYmFzZWxpbmVfYmVmb3JlX2hhc2giOiJzaGEyNTY6NmVjNDJkNDEwZDRmMjI3MmRiZjRlYzUzN2FiMWQ4Njc2NDk1Y2MwMzRmMTI5YzUwYWU5Y2I5NjBkYzYzN2I0OCIsImJhc2VsaW5lX2FmdGVyX2hhc2giOiJzaGEyNTY6ODIyOGI2MmYyYWNhNTYzYWMxNzc3MThiYjYzZjg2NTA0NTQ4YTBkZGRmMTAzZmVkMGU4ZDg2MDNlODVkZDQyNCIsImNhcGFiaWxpdGllcyI6WyJpbnRlZ3JhdGlvbnMiXX0
+
+# === Metadata ===
+change_name: add-comments-and-seo
+last_transition: 2026-10-18T13:05:18.579Z
+last_transition_from: null
+last_transition_to: null
+
+# === Decision points ===
+dp_0_result: null
+dp_0_timestamp: null
+dp_0_decisions: null
+dp_0_confirmed: null
+dp_1_result: null
+dp_1_timestamp: null
+dp_1_decisions: null
+dp_1_confirmed: null
+dp_2_result: null
+dp_2_timestamp: null
+dp_2_decisions: null
+dp_2_confirmed: null
+dp_3_result: null
+dp_3_timestamp: null
+dp_3_decisions: null
+dp_3_confirmed: null
+dp_4_result: null
+dp_4_timestamp: null
+dp_4_decisions: null
+dp_4_confirmed: null
+dp_5_result: null
+dp_5_timestamp: null
+dp_5_decisions: null
+dp_5_confirmed: null
+dp_6_result: null
+dp_6_timestamp: null
+dp_6_decisions: null
+dp_6_confirmed: null
+dp_7_result: null
+dp_7_timestamp: null
+dp_7_decisions: null
+dp_7_confirmed: null

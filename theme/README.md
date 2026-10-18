@@ -73,13 +73,13 @@ pnpm build-only     # 只构建：生成 templates/ 与 templates/assets/
 
 体积预算（M3a 起，回归时看这三个数）：
 
-| 产物 | M1 基线 | M2 | M3a 当前 |
-|---|---|---|---|
-| `templates/assets/main-*.js` | 0.67 kB | 7.00 kB（gzip 2.70 kB） | 7.19 kB（gzip 2.79 kB） |
-| `templates/assets/main-*.css` | 141.78 kB | 142.36 kB（gzip 59.92 kB） | 153.53 kB（gzip 62.79 kB） |
-| `dist/z-blog-sg-<版本>.zip` | 5.48 MB | 5.50 MB | 5.51 MB |
+| 产物 | M1 基线 | M2 | M3a | M4a 当前 |
+|---|---|---|---|---|
+| `templates/assets/main-*.js` | 0.67 kB | 7.00 kB（gzip 2.70 kB） | 7.19 kB（gzip 2.79 kB） | 8.45 kB（gzip 3.29 kB） |
+| `templates/assets/main-*.css` | 141.78 kB | 142.36 kB（gzip 59.92 kB） | 153.53 kB（gzip 62.79 kB） | 152.26 kB（gzip 61.71 kB） |
+| `dist/z-blog-sg-<版本>.zip` | 5.48 MB | 5.50 MB | 5.51 MB | 5.52 MB |
 
-交互层 JS 的预算是 **25 kB**（未压缩），当前 7.19 kB；主题包的体积几乎全部来自中文字体分片，加页面结构基本不影响下载量。`check-theme.sh --components` 会断言动画只用 `transform`/`opacity` 且时长一律引用 `--motion-*`，避免回归时悄悄引入重排。
+交互层 JS 的预算是 **25 kB**（未压缩），当前 8.45 kB；主题包的体积几乎全部来自中文字体分片，加页面结构基本不影响下载量。`check-theme.sh --components` 会断言动画只用 `transform`/`opacity` 且时长一律引用 `--motion-*`，避免回归时悄悄引入重排。
 
 ## 打包
 
@@ -205,6 +205,56 @@ cp theme.yaml settings.yaml "$DEST/"
 
 CSS 是靠「页面根节点的类」区分这两页的：`page.html` 先把 `sg-friend-grid` 类挂在正文容器上，样式再对 `.sg-friend-grid li > a` 生效。所以**不要**把这几个类名写进 Markdown，否则样式会被叠加两次。
 
+## 评论（Artalk）
+
+文章页与独立页面的评论区由 Artalk 提供，外观按 RINE 频道做（`.sg-comments` + 覆盖 `.atk-*`）。主题**不把 Artalk 打进包**，而是在浏览器里按需加载评论后端自己托管的 `dist/Artalk.js` 与 `dist/Artalk.css`——评论后端升级时前端跟着升级，主题不用重新发版。
+
+### 设置项
+
+控制台 → 外观 → 主题 → 设置 → **集成**，对应 `settings.yaml` 的 `integration` 组：
+
+| 设置项 | 键 | 默认 | 说明 |
+|---|---|---|---|
+| 启用评论 | `comments_enabled` | 开 | 关掉后文章与页面都不渲染评论区 |
+| 评论服务地址 | `comments_server` | 空 | 空 = 同源 `/artalk`；本地没有 Caddy，要填 `http://localhost:23366` |
+| 评论站点名 | `comments_site_name` | 空 | 空 = 用站点标题；**必须与 Artalk 后台的站点名一致** |
+
+注意：Artalk 前端配置里只有 `site`（站点名），**没有 siteKey** —— 实测 2.10.0 的 `dist/Artalk.js` 里 `siteKey` 出现 0 次。所以主题不提供 siteKey 设置项，评论是按站点名归属的。
+
+### 它是怎么挂上去的
+
+1. `src/partials/comments.html` 输出挂载点：`#sg-comments`，并把服务地址与站点名写进 `data-server` / `data-site`（服务端直出，禁用 JS 也不报错）。
+2. `src/js/comments.ts` 读这两个属性，注入 `<server>/dist/Artalk.css` 与 `Artalk.js`，然后 `Artalk.init({ el, server, site, pageKey: location.pathname })`。
+3. 成功时挂载点带 `data-sg-ready="1"` 并移除占位文案；失败时带 `data-sg-failed="1"` 并把占位文案改成「RINE 频道连接失败」，**不影响正文阅读**。
+4. 是否显示还受 Halo 内容自身的「允许评论」开关约束（模板里的 `haloCommentEnabled`）。
+
+### 排查
+
+- 页面能看到「RINE 频道」标题与「正在接入 RINE 频道……」→ 说明挂载点渲染了，但脚本没取到资源：检查 `data-server` 是否指向可达的地址。
+- 浏览器控制台报 `Artalk 全局对象不存在` → `dist/Artalk.js` 返回的不是 JS（多半是 404 页面或反代前缀没剥）。
+- 评论发不出去 → Artalk 后台站点名与 `comments_site_name` 不一致，评论落到了别的站点。
+
+## SEO 与订阅
+
+`src/partials/meta.html` 被 10 个路由模板的 `<head>` include，输出站点级 SEO 元信息：
+
+| 标签 | 取值 |
+|---|---|
+| `<meta name="description">` | 文章/页面取摘要，列表页取站点副标题 |
+| `og:site_name` / `og:type` / `og:title` / `og:description` | 文章页 `og:type=article`，其余 `website` |
+| `twitter:card` / `twitter:title` / `twitter:description` | `summary` 卡片 |
+| `og:url` 与 `<link rel="canonical">` | **仅在站点地址可用时输出**（见下） |
+| `<link rel="alternate" type="application/rss+xml">` | `/rss.xml` |
+
+`og:url` 与 `canonical` 必须是绝对地址，而模板里只有相对 permalink；拼绝对地址要读站点对外 URL（`site.url`）。拿不到就**整个不输出**——输出一个错的绝对地址比不输出更糟（搜索引擎会把页面当成另一条 URL）。在控制台把站点地址配好（或启动时给 Halo 正确的 `--halo.external-url`），这两个标签会自己出现，无需改主题。
+
+页脚固定给出两个订阅入口，都是 Halo 内置插件提供的稳定路径：
+
+- `/rss.xml` —— 内置 feed 插件，默认输出最近文章
+- `/sitemap.xml` —— 内置 sitemap 插件
+
+两者都不需要额外装插件；如果被别的插件接管，地址也不变。
+
 ## 本地预览验证
 
 `theme/verify/preview-test.sh` 把「起站 → 初始化 → 装主题 → 激活 → 路由断言」串成一条命令，用来在不用手点控制台的情况下确认主题真的能渲染：
@@ -214,7 +264,10 @@ bash theme/verify/preview-test.sh          # 验完停站（保留数据）
 bash theme/verify/preview-test.sh --keep   # 验完保持容器运行，方便人工走查
 bash theme/verify/preview-test.sh --reset  # 验前先重建实例（换模板后必须这样跑）
 bash theme/verify/preview-test.sh --purge  # 验完停站并删除数据卷与 deploy/data
+bash theme/verify/preview-test.sh --keep --integrations --seo  # 连评论后端与 SEO/订阅一起验
 ```
+
+`--integrations` 会额外拉起 Artalk 容器并断言评论挂载点；`--seo` 会额外断言 OG/Twitter 元信息与 `/rss.xml`、`/sitemap.xml` 可用。两个开关都可以和上面任何一个组合。
 
 - 前提：Docker 已启动、`deploy/` 下的编排可用、`theme/dist/z-blog-sg-<版本>.zip` 已构建。
 - 站点未初始化时它会自动初始化，管理员默认 `admin` / `SgPreviewPass1`；可用 `HALO_ADMIN_USER`、`HALO_ADMIN_PASS`、`HALO_ADMIN_EMAIL`、`HALO_SITE_TITLE`、`BASE_URL` 覆盖。Halo 只允许 `A-Z a-z 0-9` 与 `!@#$%^&*` 作为密码字符，默认值里因此不能出现连字符。
@@ -268,11 +321,16 @@ bash theme/verify/preview-test.sh --purge  # 验完停站并删除数据卷与 d
 | 系统减少动效 | 系统开「减少动态效果」后首次访问（先清 `localStorage` 的 `sg-motion`） | 动效默认关闭，但手动点「开」仍然生效 |
 | 星空与鼠标辉光 | 桌面端移动鼠标 | 星点缓慢上移，指针附近有微弱辉光；触屏与窄屏不应出现 |
 | 世界线横幅 | 首页 hero 下方 | 一条横向世界线，节点数与分类数一致（≤5），首节点高亮；窄屏只留前 3 个 |
+| 评论区 | 打开任一文章页 | 正文下方出现「RINE 频道」区块与评论表单；样式跟随世界线主色，暗色底不突兀 |
+| 订阅入口 | 页脚 | 有「RSS 订阅」与「站点地图」两个链接，点开分别返回 XML |
+| SEO 元信息 | 查看页面源码 `<head>` | 有 `og:title`、`og:description`、`twitter:card`；站点地址配好后还会出现 `og:url` 与 `<link rel="canonical">` |
 | 文章详情终端 | 打开任意文章 | 标题栏像终端窗口（LED + 名称 + 时间戳），正文上方有「D-Mail 发送记录」三行元信息，世界线名与文章分类一致 |
 | 归档时间轴 | `/archives` | 竖线 + 年份节点 + 月份分组，文章按时间倒序；空站点显示「还没有任何观测记录」 |
 | 分类分支 | `/categories` 与单个分类页 | 每项一张分支卡（标签「世界线分支」+ 名称 + 篇数）；分类页标题下有内联徽章 |
 | 关于页与友链页 | `/about`、`/friends` | 关于页有研究所徽章 + 成员卡；友链页每个链接一张卡片；两页都不出现横向滚动 |
 | 404 终端 | 访问不存在的路径 | 终端窗口样式，含状态码与「未找到该世界线」与返回首页链接 |
+| 评论区渲染 | 打开任意文章或 `/about` | 正文下方出现「RINE 频道」标题与评论框；Artalk 未配置好时显示「评论已关闭」或连接失败提示，且正文不受影响 |
+| 评论样式跟随世界线 | 切到 α 世界线后再看评论区 | 发送按钮、昵称、头像边框的强调色跟着换成冰蓝 |
 
 发现不符时，先确认是不是没重新构建（`pnpm build-only`），再看 `templates/assets/main-*.css` 里对应规则是否生成。
 

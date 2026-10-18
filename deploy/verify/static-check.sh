@@ -6,6 +6,7 @@
 #   bash deploy/verify/static-check.sh --vars       # 环境变量注入与替换
 #   bash deploy/verify/static-check.sh --docs       # 手册章节完整性
 #   bash deploy/verify/static-check.sh --eol        # 脚本换行符与 git 属性
+#   bash deploy/verify/static-check.sh --artalk     # 评论后端（Artalk）接入
 #
 # 退出码：0 全部通过；1 有检查失败；2 用法错误；3 缺少 docker CLI。
 set -euo pipefail
@@ -30,6 +31,7 @@ DO_PROD=0
 DO_VARS=0
 DO_DOCS=0
 DO_EOL=0
+DO_ARTALK=0
 
 for arg in "$@"; do
   case "$arg" in
@@ -37,8 +39,9 @@ for arg in "$@"; do
     --vars) DO_VARS=1 ;;
     --docs) DO_DOCS=1 ;;
     --eol)  DO_EOL=1 ;;
-    --all)  DO_PROD=1; DO_VARS=1; DO_DOCS=1; DO_EOL=1 ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    --artalk) DO_ARTALK=1 ;;
+    --all)  DO_PROD=1; DO_VARS=1; DO_DOCS=1; DO_EOL=1; DO_ARTALK=1 ;;
+    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
     *) printf '未知参数: %s\n' "$arg" >&2; exit 2 ;;
   esac
 done
@@ -194,6 +197,75 @@ check_vars() {
   rm -f "$out" "$tmp_env"
 }
 
+check_artalk() {
+  head1 "评论后端（Artalk）"
+  local out
+  out="$(mktemp)"
+  if ! render_compose "$out" -f "$BASE"; then
+    bad "渲染编排失败，无法校验 artalk 服务"
+    rm -f "$out"
+    return
+  fi
+
+  if grep -q '^  artalk:' "$out"; then ok "编排含 artalk 服务"; else bad "编排缺少 artalk 服务"; fi
+  if grep -q 'image: artalk/artalk-go:2\.' "$out"; then
+    ok "artalk 镜像固定到 2.x 补丁版本"
+  else
+    bad "artalk 镜像未固定版本"
+  fi
+  if grep -q 'published: "23366"' "$out"; then
+    ok "artalk 端口已发布（仅回环）"
+  else
+    bad "artalk 未发布 23366"
+  fi
+  if grep -q 'deploy.data.artalk' "$out"; then
+    ok "评论数据落在 deploy/data/artalk"
+  else
+    bad "评论数据未落到 deploy/data/artalk"
+  fi
+  if grep -q '23366/api/v2/conf' "$out"; then
+    ok "artalk 健康检查打 /api/v2/conf"
+  else
+    bad "artalk 健康检查缺失或路径不对"
+  fi
+  rm -f "$out"
+
+  local v
+  for v in ARTALK_IMAGE ARTALK_SITE_NAME ARTALK_SERVER_PORT; do
+    if sed -n 's/^\([A-Z_][A-Z0-9_]*\)=.*/\1/p' "$ENV_FILE" | grep -qx "$v"; then
+      ok "$ENV_FILE 声明 $v"
+    else
+      bad "$ENV_FILE 缺少 $v"
+    fi
+  done
+
+  # 编排文件在 Windows 检出后是 CRLF，`^      artalk:$` 这类行尾锚点的正则必须先去 CR
+  local prod_body=""
+  [ -f "$PROD" ] && prod_body="$(tr -d '\r' <"$PROD")"
+  if printf '%s\n' "$prod_body" | grep -A1 '^      artalk:$' | grep -q 'service_healthy'; then
+    ok "生产叠加层：Caddy 等 artalk 健康后才启动"
+  else
+    bad "生产叠加层未让 Caddy 依赖 artalk"
+  fi
+
+  if [ -f deploy/caddy/Caddyfile ] && grep -q 'handle_path /artalk/\*' deploy/caddy/Caddyfile; then
+    ok "Caddyfile 对 /artalk/* 剥离前缀后反代"
+  else
+    bad "Caddyfile 缺少 /artalk/* 路由"
+  fi
+  if [ -f deploy/caddy/Caddyfile ] && grep -q 'reverse_proxy artalk:23366' deploy/caddy/Caddyfile; then
+    ok "Caddyfile 反代目标为 artalk:23366"
+  else
+    bad "Caddyfile 未指向 artalk:23366"
+  fi
+
+  if [ -f deploy/backup/backup.sh ] && grep -q 'for d in halo2 artalk' deploy/backup/backup.sh; then
+    ok "备份脚本打包 artalk 数据目录"
+  else
+    bad "备份脚本未覆盖 artalk 数据"
+  fi
+}
+
 check_docs() {
   head1 "手册完整性"
   if [ ! -f "$README" ]; then
@@ -202,7 +274,7 @@ check_docs() {
   fi
   ok "存在 $README"
 
-  local base_sections=("首次启动" "进入 Console" "查看日志" "停止服务" "数据目录")
+  local base_sections=("首次启动" "进入 Console" "查看日志" "停止服务" "数据目录" "评论（Artalk）")
   for s in "${base_sections[@]}"; do
     if grep -q "^#\{1,3\} .*$s" "$README"; then
       ok "手册含章节：$s"
@@ -261,6 +333,7 @@ check_files
 check_base
 [ "$DO_VARS" -eq 1 ] && check_vars
 [ "$DO_PROD" -eq 1 ] && check_prod
+[ "$DO_ARTALK" -eq 1 ] && check_artalk
 [ "$DO_DOCS" -eq 1 ] && check_docs
 [ "$DO_EOL" -eq 1 ]  && check_eol
 

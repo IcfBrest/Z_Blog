@@ -13,6 +13,7 @@ import { initDivergence } from "./divergence";
 import { initTypewriter } from "./typewriter";
 import { initParticles } from "./particles";
 import { initPointerGlow } from "./pointer-glow";
+import { initComments } from "./comments";
 
 function boot(): void {
   initMotion();
@@ -21,6 +22,8 @@ function boot(): void {
   initTypewriter();
   initParticles();
   initPointerGlow();
+  // 评论按需加载外部脚本，不阻塞首屏；失败时只降级，不影响正文
+  void initComments();
 }
 
 if (document.readyState === "loading") {

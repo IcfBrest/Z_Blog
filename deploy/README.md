@@ -84,8 +84,9 @@ docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d halo
 
 | 位置 | 容器内路径 | 内容 | 存放方式 |
 | --- | --- | --- | --- |
-| 命名卷 `sg-blog-halodb-data` | `/var/lib/postgresql/data` | 文章、评论、用户、配置 | Docker 命名卷 |
+| 命名卷 `sg-blog-halodb-data` | `/var/lib/postgresql/data` | 文章、用户、配置 | Docker 命名卷 |
 | `deploy/data/halo2/` | `/root/.halo2` | 上传的附件、插件、Halo 本地配置 | 绑定挂载 |
+| `deploy/data/artalk/` | `/data` | 评论数据库 `artalk.db` 与 `artalk.yml` | 绑定挂载 |
 
 **数据库为什么用命名卷**：PostgreSQL 的 `initdb` 会把数据目录 `chmod` 成 `0700`，而 Windows 上的绑定挂载（DrvFs）不支持 `chmod`，容器会以下面的错误无限重启：
 
@@ -101,7 +102,41 @@ docker volume inspect sg-blog-halodb-data     # 查看卷的挂载点与元信�
 docker volume rm sg-blog-halodb-data          # 彻底删除数据库（不可恢复，先备份）
 ```
 
-`deploy/data/halo2/` 是绑定挂载，`docker compose down` 后仍在，整目录 `rsync` 即可完成附件迁移。
+`deploy/data/halo2/` 是绑定挂载，`docker compose down` 后仍在，整目录 `rsync` 即可完成附件迁移。`deploy/data/artalk/` 同理。
+
+## 评论（Artalk）
+
+评论后端是 [Artalk](https://artalk.js.org/)：Go 写的单文件服务，默认用 SQLite，因此不需要额外的数据库容器，2C2G 上内存占用很小。编排里的 `artalk` 服务只绑定回环地址：
+
+| 地址 | 用途 |
+| --- | --- |
+| `http://localhost:23366` | 直接访问 Artalk（本地调试、探活） |
+| `http://<你的域名>/artalk/` | 线上入口，由 Caddy 剥掉 `/artalk` 前缀后转发 |
+
+> 本地没有 Caddy，所以**本地**的评论后台要从 `http://localhost:23366/sidebar/` 进入，主题设置里的「评论服务地址」也要填 `http://localhost:23366`。线上留空即可（默认 `/artalk`，同域名走 Caddy）。
+
+### 首次使用：创建管理员并拿到 siteKey
+
+1. 起站后打开 Artalk 后台。第一次进入会让你注册管理员账号，**第一个注册的账号自动成为管理员**，请立刻注册，别让这个位置空着。
+2. 在后台「站点」里新建站点：名称随你，URL 填站点对外地址（本地 `http://localhost:8090`，线上 `https://<你的域名>`），保存后复制生成的 **siteKey**。
+3. 打开 Halo Console → 外观 → 主题 → 世界线观测站 → 设置 → **集成**，填写：
+   - 评论服务地址：线上留空；本地填 `http://localhost:23366`。
+   - 站点名 / Site Key：与第 2 步一致。
+4. 评论是否真的显示还取决于两处：文章/页面自身的「允许评论」开关（Halo 内容设置），以及主题设置里的「启用评论」。
+
+### 常用命令
+
+```bash
+docker compose -f deploy/docker-compose.yml logs -f artalk      # 看日志
+docker compose -f deploy/docker-compose.yml restart artalk      # 重启
+curl -s http://localhost:23366/api/v2/conf | head -c 200        # 探活（返回 frontend_conf JSON）
+```
+
+### 升级与备份
+
+- 升级只改 `.env` 里的 `ARTALK_IMAGE`（当前固定 `artalk/artalk-go:2.10.0`），再 `docker compose up -d artalk`。
+- 评论数据在 `deploy/data/artalk/artalk.db`，每日备份脚本会把它和 Halo 附件一起打包（见「备份与恢复演练」）。
+- 端口冲突时改 `.env` 里的 `ARTALK_SERVER_PORT`，线上入口不受影响（Caddy 走容器网络）。
 
 ## 静态校验
 
@@ -112,6 +147,7 @@ bash deploy/verify/static-check.sh            # 基础编排 + 必备文件
 bash deploy/verify/static-check.sh --vars     # 环境变量注入与替换
 bash deploy/verify/static-check.sh --eol      # 脚本换行符与 git 属性
 bash deploy/verify/static-check.sh --docs     # 本手册章节完整性
+bash deploy/verify/static-check.sh --artalk   # 评论后端（Artalk）接入
 bash deploy/verify/static-check.sh --all      # 以上全部（含生产叠加层）
 ```
 

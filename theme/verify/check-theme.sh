@@ -9,6 +9,7 @@
 #   bash theme/verify/check-theme.sh --templates# 只查路由模板齐全
 #   bash theme/verify/check-theme.sh --components # 只查交互组件（世界线/简洁模式/辉光管/动效）
 #   bash theme/verify/check-theme.sh --pages    # 只查页面级结构（横幅/终端/D-Mail/时间轴/分支/卡片/错误页）
+#   bash theme/verify/check-theme.sh --integrations # 只查外部集成（Artalk 评论 / SEO 元信息）
 #   bash theme/verify/check-theme.sh --docs     # 只查主题开发说明
 #
 # 退出码：0 全部通过 / 1 有失败 / 2 用法错误 / 3 缺少构建产物
@@ -32,10 +33,11 @@ DO_LAYOUT=0
 DO_TEMPLATES=0
 DO_COMPONENTS=0
 DO_PAGES=0
+DO_INTEGRATIONS=0
 DO_DOCS=0
 
 usage() {
-  sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 for arg in "$@"; do
@@ -46,15 +48,16 @@ for arg in "$@"; do
     --templates) DO_TEMPLATES=1 ;;
     --components) DO_COMPONENTS=1 ;;
     --pages) DO_PAGES=1 ;;
+    --integrations) DO_INTEGRATIONS=1 ;;
     --docs) DO_DOCS=1 ;;
-    --all) DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_DOCS=1 ;;
+    --all) DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_INTEGRATIONS=1; DO_DOCS=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "未知参数：$arg" >&2; usage >&2; exit 2 ;;
   esac
 done
 
-if [ "$DO_TOKENS$DO_FONTS$DO_LAYOUT$DO_TEMPLATES$DO_COMPONENTS$DO_PAGES$DO_DOCS" = "0000000" ]; then
-  DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_DOCS=1
+if [ "$DO_TOKENS$DO_FONTS$DO_LAYOUT$DO_TEMPLATES$DO_COMPONENTS$DO_PAGES$DO_INTEGRATIONS$DO_DOCS" = "00000000" ]; then
+  DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_INTEGRATIONS=1; DO_DOCS=1
 fi
 
 PASS=0
@@ -552,6 +555,133 @@ if [ "$DO_PAGES" -eq 1 ]; then
   fi
 fi
 
+# ── 外部集成（评论 / SEO）────────────────────────────────
+if [ "$DO_INTEGRATIONS" -eq 1 ]; then
+  head_ "外部集成（Artalk 评论 / SEO 元信息）"
+
+  # 1) 设置项：integration 分组必须存在，且用到的字段都在
+  if grep -q 'group: integration' "$SETTINGS" && grep -q 'label: 集成' "$SETTINGS"; then
+    ok "settings.yaml 有「集成」分组"
+  else
+    bad "settings.yaml 缺少 integration 分组"
+  fi
+  for key in comments_enabled comments_server comments_site_name; do
+    if grep -q "name: $key" "$SETTINGS"; then
+      ok "设置项存在：$key"
+    else
+      bad "settings.yaml 缺少设置项：$key"
+    fi
+  done
+
+  # 2) Artalk 2.10 的前端配置只有 site（站点名），没有 siteKey：
+  #    dist/Artalk.js 里 siteKey 出现 0 次。留一个无效设置项只会误导管理员。
+  if grep -q 'name: comments_site_key' "$SETTINGS"; then
+    bad "settings.yaml 仍保留 comments_site_key，但 Artalk 前端并不支持 siteKey"
+  else
+    ok "没有引入 Artalk 前端不存在的 siteKey 设置项"
+  fi
+
+  # 3) 模板从 integration 分组读取评论设置
+  if grep -rq 'theme.config.integration.comments_' "$ROOT/src" 2>/dev/null; then
+    ok "模板从 integration 分组读取评论设置"
+  else
+    bad "模板没有读取 theme.config.integration.comments_*"
+  fi
+
+  # 4) 构建产物：文章页与独立页面都必须带评论挂载点，且不再有 Halo 原生评论标签
+  for page in post page; do
+    if [ -f "$TPL/$page.html" ] && grep -q 'id="sg-comments"' "$TPL/$page.html"; then
+      ok "$page.html 含评论挂载点 #sg-comments"
+    else
+      bad "$page.html 缺少评论挂载点"
+    fi
+    if [ -f "$TPL/$page.html" ] && grep -q 'data-server=' "$TPL/$page.html"; then
+      ok "$page.html 把评论服务地址写进 data-server"
+    else
+      bad "$page.html 没有 data-server"
+    fi
+  done
+
+  if grep -rq '<halo:comment' "$TPL" 2>/dev/null; then
+    bad "构建产物里仍有 <halo:comment>，Halo 原生评论区会与 Artalk 并存"
+  else
+    ok "构建产物不含 Halo 原生评论标签"
+  fi
+
+  # 5) 前端脚本：按需加载 Artalk 自己的产物，而不是把 Artalk 打进主题包
+  js_src="$ROOT/src/js/comments.ts"
+  if [ -f "$js_src" ]; then
+    ok "存在 src/js/comments.ts"
+  else
+    bad "缺少 src/js/comments.ts"
+  fi
+  if [ -f "$js_src" ] && grep -q '/dist/Artalk.js' "$js_src" && grep -q '/dist/Artalk.css' "$js_src"; then
+    ok "评论脚本按需加载 Artalk 的 dist 产物"
+  else
+    bad "评论脚本没有加载 Artalk 的 dist 产物"
+  fi
+  if [ -f "$js_src" ] && grep -q 'Artalk.init' "$js_src"; then
+    ok "评论脚本调用 Artalk.init 挂载"
+  else
+    bad "评论脚本没有调用 Artalk.init"
+  fi
+
+  # 6) 打包后的 bundle 必须真的带上挂载逻辑（源码写了不等于打进去了）
+  bundle="$(cat "$ASSETS"/main-*.js 2>/dev/null)"
+  if printf '%s' "$bundle" | grep -q 'sg-comments'; then
+    ok "构建后的 JS 含评论挂载逻辑"
+  else
+    bad "构建后的 JS 不含评论挂载逻辑"
+  fi
+
+  # 7) 评论区外观：RINE 风格是覆盖 Artalk 的 .atk-* 类实现的，必须真的进产物
+  css_all="$(cat "$ASSETS"/main-*.css 2>/dev/null)"
+  if printf '%s' "$css_all" | grep -q '\.sg-comments__mount'; then
+    ok "构建后的 CSS 含评论区挂载点样式"
+  else
+    bad "构建后的 CSS 缺少 .sg-comments__mount"
+  fi
+  if printf '%s' "$css_all" | grep -q 'RINE'; then
+    ok "评论区带 RINE 频道标识"
+  else
+    bad "评论区缺少 RINE 频道标识"
+  fi
+  atk_count="$(printf '%s' "$css_all" | grep -o '\.atk-[a-z-]*' | sort -u | wc -l | tr -d ' ')"
+  if [ "$atk_count" -ge 4 ]; then
+    ok "覆盖了 $atk_count 个 Artalk 类名（.atk-*）"
+  else
+    bad "Artalk 类名覆盖过少（$atk_count < 4），评论区会保持原样"
+  fi
+
+  # 8) SEO：每个路由模板都要真的带上 OG / Twitter 卡片元信息
+  seo_missing=""
+  for t in $TEMPLATES; do
+    f="$TPL/$t.html"
+    [ -f "$f" ] || continue
+    for tag in 'og:title' 'og:description' 'twitter:card'; do
+      grep -q -- "$tag" "$f" || seo_missing="$seo_missing $t:$tag"
+    done
+  done
+  if [ -z "$seo_missing" ]; then
+    ok "全部路由模板都带 OG / Twitter 元信息"
+  else
+    bad "以下模板缺 SEO 元信息：$seo_missing"
+  fi
+
+  if grep -q 'rel="canonical"' "$TPL/post.html"; then
+    ok "文章页输出 canonical（站点 URL 可用时）"
+  else
+    bad "文章页没有 canonical"
+  fi
+
+  # 9) 页脚订阅入口：RSS 与 sitemap 都是 Halo 内置插件给出的稳定路径
+  if grep -q '/rss.xml' "$TPL/index.html" && grep -q '/sitemap.xml' "$TPL/index.html"; then
+    ok "页脚含 RSS 与站点地图入口"
+  else
+    bad "页脚缺少 RSS / 站点地图入口"
+  fi
+fi
+
 # ── 主题开发说明 ──────────────────────────────────────────
 if [ "$DO_DOCS" -eq 1 ]; then
   head_ "主题开发说明"
@@ -564,7 +694,7 @@ if [ "$DO_DOCS" -eq 1 ]; then
   fi
 
   if [ -f "$README" ]; then
-    for section in "构建" "打包" "安装到本地 Halo" "新增页面模板" "新增配色 token" "页面结构" "组件与开关" "人工走查清单"; do
+    for section in "构建" "打包" "安装到本地 Halo" "新增页面模板" "新增配色 token" "页面结构" "组件与开关" "评论（Artalk）" "SEO 与订阅" "人工走查清单"; do
       if grep -q "^#\{1,3\} .*$section" "$README"; then
         ok "说明含章节：$section"
       else
