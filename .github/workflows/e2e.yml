@@ -20,6 +20,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: theme/pnpm-lock.yaml
+
+      - name: 构建主题包（端到端要装的是真 zip）
+        working-directory: theme
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          ls -lh dist/*.zip
+
       - name: 准备运行期 env（Halo 改用 Docker Hub 镜像）
         # registry.fit2cloud.com 在部分网络下会卡在某一层，runner 上不可靠；
         # Docker Hub 的 halohub/halo 是同一个镜像、同一批 layer 摘要。
