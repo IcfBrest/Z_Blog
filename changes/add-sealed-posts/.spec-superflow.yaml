@@ -1,0 +1,63 @@
+# .spec-superflow.yaml — lightweight state machine
+# Progress and legacy approvals. Recover missing evidence; never infer approval from artifact existence.
+
+# === Core state ===
+state: closing
+workflow: full
+workflow_variant: planned
+completion_outcome: verified
+completion_reason: null
+revision: null
+
+# === Hashes (fast staleness detection) ===
+artifacts_hash: sha256:c9e490177753d369f2a736d0292f1265c8c75ac243446956ba600a456fa13427
+contract_hash: null
+
+# === Execution progress ===
+execution_mode: null
+execution_plan_hash: null
+execution_plan_revision: null
+batches_completed: 0
+test_result: pass: bash deploy/verify/static-check.sh --all && bash theme/verify/check-theme.sh --all && node theme/verify/unit-sealed.mjs
+spec_merged: true
+spec_publication_receipt: eyJ2ZXJzaW9uIjoxLCJzb3VyY2VfaGFzaCI6InNoYTI1Njo2NWE1ZGFiYmFmN2JjMDFhZjE3YmQ0YjZiYWY1MjcwNGNiZTdlN2Y1OTBmOWZmYzNiYTM2N2U0ZTNjOWNhYmViIiwiYmFzZWxpbmVfYmVmb3JlX2hhc2giOiJzaGEyNTY6MGM0ZGRmMmVhN2YxYzE1OTBmZGRkZWE3ZjU4ODgyYWJjMzg0YmY1MzJmN2JkMjEwMzBiYWRmODUwYjhiODIyYiIsImJhc2VsaW5lX2FmdGVyX2hhc2giOiJzaGEyNTY6Yjk4ODQ0NmI3NWJmMGY5MTdlZGJmODNjZjc5MzhlNGFkMWZjOGU0MzNkMTYwMzc3MDhlNzUzNjBlZjQ3NWMxMSIsImNhcGFiaWxpdGllcyI6WyJ0aGVtZS1zZWFsZWQtcG9zdHMiXX0
+
+# === Metadata ===
+change_name: add-sealed-posts
+last_transition: 2026-10-19T13:49:31.678Z
+last_transition_from: null
+last_transition_to: null
+
+# === Decision points ===
+dp_0_result: null
+dp_0_timestamp: null
+dp_0_decisions: null
+dp_0_confirmed: null
+dp_1_result: null
+dp_1_timestamp: null
+dp_1_decisions: null
+dp_1_confirmed: null
+dp_2_result: null
+dp_2_timestamp: null
+dp_2_decisions: null
+dp_2_confirmed: null
+dp_3_result: null
+dp_3_timestamp: null
+dp_3_decisions: null
+dp_3_confirmed: null
+dp_4_result: null
+dp_4_timestamp: null
+dp_4_decisions: null
+dp_4_confirmed: null
+dp_5_result: null
+dp_5_timestamp: null
+dp_5_decisions: null
+dp_5_confirmed: null
+dp_6_result: null
+dp_6_timestamp: null
+dp_6_decisions: null
+dp_6_confirmed: null
+dp_7_result: null
+dp_7_timestamp: null
+dp_7_decisions: null
+dp_7_confirmed: null

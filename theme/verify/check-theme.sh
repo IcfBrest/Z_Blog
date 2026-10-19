@@ -13,6 +13,7 @@
 #   bash theme/verify/check-theme.sh --search   # 只查搜索入口（PluginSearchWidget 适配）
 #   bash theme/verify/check-theme.sh --plugins  # 只查外部插件收口（看板娘收起、页脚留白）
 #   bash theme/verify/check-theme.sh --analytics # 只查访问统计（umami 脚本与设置项）
+#   bash theme/verify/check-theme.sh --sealed   # 只查密码文章（D-Mail 解锁）
 #   bash theme/verify/check-theme.sh --docs     # 只查主题开发说明
 #
 # 退出码：0 全部通过 / 1 有失败 / 2 用法错误 / 3 缺少构建产物
@@ -40,6 +41,7 @@ DO_INTEGRATIONS=0
 DO_SEARCH=0
 DO_PLUGINS=0
 DO_ANALYTICS=0
+DO_SEALED=0
 DO_DOCS=0
 
 usage() {
@@ -58,15 +60,16 @@ for arg in "$@"; do
     --search) DO_SEARCH=1 ;;
     --plugins) DO_PLUGINS=1 ;;
     --analytics) DO_ANALYTICS=1 ;;
+  --sealed) DO_SEALED=1 ;;
     --docs) DO_DOCS=1 ;;
-    --all) DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_INTEGRATIONS=1; DO_SEARCH=1; DO_PLUGINS=1; DO_ANALYTICS=1; DO_DOCS=1 ;;
+    --all) DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_INTEGRATIONS=1; DO_SEARCH=1; DO_PLUGINS=1; DO_ANALYTICS=1; DO_SEALED=1; DO_DOCS=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "未知参数：$arg" >&2; usage >&2; exit 2 ;;
   esac
 done
 
-if [ "$DO_TOKENS$DO_FONTS$DO_LAYOUT$DO_TEMPLATES$DO_COMPONENTS$DO_PAGES$DO_INTEGRATIONS$DO_SEARCH$DO_PLUGINS$DO_ANALYTICS$DO_DOCS" = "00000000000" ]; then
-  DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_INTEGRATIONS=1; DO_SEARCH=1; DO_PLUGINS=1; DO_ANALYTICS=1; DO_DOCS=1
+if [ "$DO_TOKENS$DO_FONTS$DO_LAYOUT$DO_TEMPLATES$DO_COMPONENTS$DO_PAGES$DO_INTEGRATIONS$DO_SEARCH$DO_PLUGINS$DO_ANALYTICS$DO_SEALED$DO_DOCS" = "000000000000" ]; then
+  DO_TOKENS=1; DO_FONTS=1; DO_LAYOUT=1; DO_TEMPLATES=1; DO_COMPONENTS=1; DO_PAGES=1; DO_INTEGRATIONS=1; DO_SEARCH=1; DO_PLUGINS=1; DO_ANALYTICS=1; DO_SEALED=1; DO_DOCS=1
 fi
 
 PASS=0
@@ -819,6 +822,61 @@ if [ "$DO_ANALYTICS" -eq 1 ]; then
   fi
 fi
 
+if [ "$DO_SEALED" -eq 1 ]; then
+  head_ "密码文章（D-Mail 解锁）"
+
+  if [ -f "$ROOT/src/post.html" ] && grep -q "data-dmail-sealed" "$ROOT/src/post.html"; then
+    ok "文章模板按密文标记分叉"
+  else
+    bad "文章模板里找不到 data-dmail-sealed 分流"
+  fi
+
+  if grep -q 'th:unless="${#strings.contains(post.content.content' "$ROOT/src/post.html"; then
+    ok "普通文章分支受 th:unless 保护（不会无条件输出全文）"
+  else
+    bad "文章模板缺少 th:unless 保护，普通分支可能无条件渲染正文"
+  fi
+
+  if grep -q 'dmail-lock.html' "$ROOT/src/post.html"; then
+    ok "锁定面板通过 include 引入"
+  else
+    bad "文章模板没有 include dmail-lock.html"
+  fi
+
+  LOCK="$ROOT/src/partials/dmail-lock.html"
+  if [ -f "$LOCK" ]; then
+    ok "解锁表单片段存在"
+    for needle in 'data-sg-dmail-form' 'name="dmail-pass"' 'type="password"' '<noscript>' 'data-sg-dmail-content'; do
+      if grep -q -- "$needle" "$LOCK"; then ok "表单含 $needle"; else bad "表单缺少 $needle"; fi
+    done
+  else
+    bad "缺少 src/partials/dmail-lock.html"
+  fi
+
+  CSS_SEALED="$ROOT/src/css/sealed.css"
+  if [ -f "$CSS_SEALED" ]; then
+    for needle in '.sg-dmail' '.sg-dmail__error' '[data-dmail-sealed]'; do
+      if grep -qF -- "$needle" "$CSS_SEALED"; then ok "解锁样式含 $needle"; else bad "解锁样式缺少 $needle"; fi
+    done
+    if grep -q 'display: none' "$CSS_SEALED"; then ok "密文载荷在视觉层隐藏"; else bad "密文载荷缺少 display: none"; fi
+  else
+    bad "缺少 src/css/sealed.css"
+  fi
+
+  if grep -q './sealed.css' "$ROOT/src/css/main.css"; then ok "main.css 引入 sealed.css"; else bad "main.css 未引入 sealed.css"; fi
+  if grep -q 'initSealed' "$ROOT/src/js/main.ts"; then ok "main.ts 调用 initSealed"; else bad "main.ts 未接线 initSealed"; fi
+
+  TOOL="$ROOT/../tools/seal.mjs"
+  if [ -f "$TOOL" ]; then
+    for needle in 'data-dmail-sealed' 'PBKDF2' 'AES-GCM'; do
+      if grep -q -- "$needle" "$TOOL"; then ok "加密工具含 $needle"; else bad "加密工具缺少 $needle"; fi
+    done
+  else
+    bad "缺少 tools/seal.mjs"
+  fi
+
+
+fi
 # ── 主题开发说明 ──────────────────────────────────────────
 if [ "$DO_DOCS" -eq 1 ]; then
   head_ "主题开发说明"
