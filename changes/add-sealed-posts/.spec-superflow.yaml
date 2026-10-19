@@ -2,10 +2,10 @@
 # Progress and legacy approvals. Recover missing evidence; never infer approval from artifact existence.
 
 # === Core state ===
-state: executing
+state: closing
 workflow: full
 workflow_variant: planned
-completion_outcome: null
+completion_outcome: verified
 completion_reason: null
 revision: null
 
@@ -18,13 +18,13 @@ execution_mode: null
 execution_plan_hash: null
 execution_plan_revision: null
 batches_completed: 0
-test_result: null
+test_result: pass: bash deploy/verify/static-check.sh --all && bash theme/verify/check-theme.sh --all && node theme/verify/unit-sealed.mjs
 spec_merged: true
 spec_publication_receipt: eyJ2ZXJzaW9uIjoxLCJzb3VyY2VfaGFzaCI6InNoYTI1Njo2NWE1ZGFiYmFmN2JjMDFhZjE3YmQ0YjZiYWY1MjcwNGNiZTdlN2Y1OTBmOWZmYzNiYTM2N2U0ZTNjOWNhYmViIiwiYmFzZWxpbmVfYmVmb3JlX2hhc2giOiJzaGEyNTY6MGM0ZGRmMmVhN2YxYzE1OTBmZGRkZWE3ZjU4ODgyYWJjMzg0YmY1MzJmN2JkMjEwMzBiYWRmODUwYjhiODIyYiIsImJhc2VsaW5lX2FmdGVyX2hhc2giOiJzaGEyNTY6Yjk4ODQ0NmI3NWJmMGY5MTdlZGJmODNjZjc5MzhlNGFkMWZjOGU0MzNkMTYwMzc3MDhlNzUzNjBlZjQ3NWMxMSIsImNhcGFiaWxpdGllcyI6WyJ0aGVtZS1zZWFsZWQtcG9zdHMiXX0
 
 # === Metadata ===
 change_name: add-sealed-posts
-last_transition: 2026-10-19T13:11:21.758Z
+last_transition: 2026-10-19T13:49:31.678Z
 last_transition_from: null
 last_transition_to: null
 
