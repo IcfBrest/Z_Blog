@@ -205,7 +205,7 @@ bash theme/verify/preview-test.sh --keep --integrations --seo --plugins --sealed
 - **D-Mail 密码文章是「防随手翻看」而不是「防提取」**：解锁后明文在 DOM 与 `sessionStorage` 里，同源脚本可读；口令丢失无法恢复；`tools/seal.mjs` 只做加密，不做口令强度策略。
 - **密文文章的摘要必须手填**：Halo 从正文自动生成摘要，密文取不出可读文字，不填就是空摘要。
 - **端到端不模拟浏览器解密**：bash 里没有 WebCrypto，所以 `preview-test --sealed` 只证明「锁定页响应体里没有明文」，解密正确性由 `node theme/verify/unit-sealed.mjs` 覆盖。
-- **CI 未在 GitHub Actions 上实跑过**：本地用与 CI 相同的命令验证通过（`static-check.sh --all`、`check-theme.sh --all`）。
+- **CI 只覆盖静态校验与构建**：GitHub Actions 每次推 `main` 会跑 `static-check.sh --all`（部署底座）与 `pnpm build` + `check-theme.sh --all`（主题），但不跑 `preview-test.sh`（需要 Docker 与真实 Halo 实例，runner 上没有）。
 - **造的数据形态单一**：预览脚本只造 3 个分类、3 篇文章、2 个页面，且都是二级分类、无置顶、无子分类；更复杂的内容形态（多级分类、大量分页、草稿与私密文章）待后续补充。
 - **`og:url` 与 `canonical` 依赖站点地址**：模板里只有相对 permalink，拼绝对地址要读站点对外 URL；拿不到时这两个标签不会输出（宁缺不错）。在控制台配好站点地址或给 Halo 正确的 `--halo.external-url` 后自动出现。
 - **`/artalk` 前缀反代只在本地验过**：`caddy validate`/`caddy adapt` 确认规则正确（`handle_path` 会剥前缀），但没有在真实域名 + 证书下跑过，第一次线上部署需要确认评论接口可达。
