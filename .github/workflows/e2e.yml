@@ -1,0 +1,40 @@
+name: E2E
+
+# 定期体检 + 手动触发。
+#
+# 刻意不挂在 push 上：一次要拉 Halo 镜像、起库、初始化、装主题、造数据，
+# 6~10 分钟起步，放进每次提交的门禁只会拖慢反馈。
+# 它回答的问题也不同：不是「我这次改坏没有」，而是「这套东西对着当前的
+# 镜像与外部依赖，还活着吗」—— 后者只有定期跑才会暴露。
+on:
+  schedule:
+    # 每周一 02:00（UTC+8）：UTC 周日 18:00
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: 起真站端到端
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 准备运行期 env（Halo 改用 Docker Hub 镜像）
+        # registry.fit2cloud.com 在部分网络下会卡在某一层，runner 上不可靠；
+        # Docker Hub 的 halohub/halo 是同一个镜像、同一批 layer 摘要。
+        run: |
+          cp deploy/.env.example deploy/.env
+          sed -i 's|^HALO_IMAGE=.*|HALO_IMAGE=halohub/halo:2.27.0|' deploy/.env
+          grep -E '^(HALO_IMAGE|POSTGRES_IMAGE|HALO_EXTERNAL_URL)=' deploy/.env
+
+      - name: 端到端（起站 → 初始化 → 登录 → 装主题 → 造数据 → 页面断言）
+        run: bash theme/verify/preview-test.sh --reset --integrations --seo --plugins --sealed --keep
+
+      - name: 失败时导出容器日志
+        if: failure()
+        run: docker compose -f deploy/docker-compose.yml logs --tail 200 || true
+
+      - name: 清理
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml down -v || true
