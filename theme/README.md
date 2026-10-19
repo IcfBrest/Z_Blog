@@ -417,3 +417,44 @@ bash theme/verify/preview-test.sh --keep --integrations --seo  # 连评论后端
 **页面报模板解析错误** —— 大概率用了 Thymeleaf 3.1 已移除的 `#request` / `#response` / `#session` / `#servletContext`。构建期不会报，只有渲染时才炸，所以改模板后一定跑 `preview-test.sh`。
 
 **`Could not parse as expression: "dot' : 'sg-divergence"`** —— 表达式里出现了双下划线。Thymeleaf 把 `__` 当作表达式预处理（`__${...}__`）的分隔符，所以 `${ch == '.' ? 'sg-divergence__dot' : 'sg-divergence__digit'}` 会在第一个 `__` 处被截断、后半段当成独立表达式解析。BEM 的 `__` 命名只在普通 `class` 属性里安全；一旦进 `${...}`，改用 `-`（本项目就是 `sg-divergence-digit` / `sg-divergence-dot`）。
+
+## 密码文章（D-Mail 解锁）
+
+需求 FR-2：未解锁只显示提示，口令正确才显示全文，会话内记忆。Halo 2.27 的 `PostSpec` 没有密码字段，主题拿到的正文是明文，因此这里用**正文加密 + 浏览器解密**：服务端只下发密文，口令在浏览器里校验。
+
+### 四步写一篇密文文章
+
+```bash
+# 1. 加密正文（Node 20+，口令建议 12 位以上短语）
+SG_SEAL_PASS='你的口令' node tools/seal.mjs --in 草稿.md --out 密文.html
+
+# 可选：反向确认能解开
+node tools/seal.mjs --check 密文.html --pass '你的口令'
+```
+
+2. 打开 Console → 写文章 → 切到 **HTML 源码模式**，把 `密文.html` 的内容整段粘进去（就是那个 `<div class="sg-sealed" data-dmail-sealed …>`）。
+3. **手填摘要**：Halo 从正文自动生成摘要，密文取不出可读文字，不手填列表里就是空摘要。
+4. 发布。访问该文章会看到 D-Mail 接收表单，输入口令后正文才出现。
+
+### 它是怎么工作的
+
+- 密文块属性：`data-salt`（16 字节 base64）、`data-iv`（12 字节 base64）、`data-iter`（PBKDF2 迭代次数，默认 200000）。
+- 密钥：PBKDF2-SHA256(口令, 盐, 迭代) → AES-256-GCM。GCM 自带完整性校验，**密文被改动一个字节就解不开**。
+- `post.html` 用 `#strings.contains(post.content.content, 'data-dmail-sealed')` 分流：命中则只输出密文载荷 + 表单，**明文根本不在响应体里**；否则照常 `th:utext` 全文。
+- 解锁成功后明文写进 `sessionStorage`（键 `sg-dmail:<路径>`），刷新不用重输，关标签页失效。
+
+### 威胁模型（别高估它）
+
+- 防的是**随手翻看**：搜不到、列表里看不到、直接打开文章看到的是表单。
+- **不防有意提取**：解锁后明文在 DOM 与 `sessionStorage` 里，同源脚本能读到；也没有防盗链级别的保护。
+- 口令丢失**无法恢复**，密文没有后门。口令太弱会被离线暴力破解（PBKDF2 20 万次只是抬高成本）。
+
+### 校验
+
+```bash
+node theme/verify/unit-sealed.mjs                       # 加解密往返、错误口令、篡改检测
+bash theme/verify/check-theme.sh --sealed               # 模板分叉、表单、样式、工具
+bash theme/verify/preview-test.sh --reset --sealed --keep  # 锁定页不含明文 canary
+```
+
+端到端不模拟浏览器解密（bash 里没有 WebCrypto），所以分工是：`unit-sealed.mjs` 证明「能正确解开」，`preview-test --sealed` 证明「锁定页响应体里真的没有明文」。

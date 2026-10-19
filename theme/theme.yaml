@@ -15,7 +15,7 @@ spec:
   issues: "https://github.com/IcfBrest/Z_Blog/issues"
   settingName: "z-blog-sg-setting"
   configMapName: "z-blog-sg-configmap"
-  version: 1.5.0
+  version: 1.6.0
   # Halo 2.26 起模板引擎为 Thymeleaf 3.1，本主题按 3.1 的可用变量编写
   requires: ">=2.20.0"
   license:

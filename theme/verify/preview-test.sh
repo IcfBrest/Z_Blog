@@ -37,6 +37,7 @@ PURGE=0
 RESET=0
 INTEGRATIONS=0
 SEO=0
+SEALED=0
 PLUGINS=0
 ARTALK_URL="${ARTALK_URL:-http://127.0.0.1:23366}"
 
@@ -51,6 +52,7 @@ for arg in "$@"; do
     --reset) RESET=1 ;;
     --integrations) INTEGRATIONS=1 ;;
     --seo) SEO=1 ;;
+  --sealed) SEALED=1 ;;
     --plugins) PLUGINS=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "未知参数：$arg" >&2; usage >&2; exit 2 ;;
@@ -762,6 +764,46 @@ if [ "$PLUGINS" -eq 1 ]; then
 fi
 
 # ── 清理 ─────────────────────────────────────────────────
+# ── 5f/6 密码文章（D-Mail 解锁）────────────────────────────
+if [ "$SEALED" -eq 1 ]; then
+  step "5f/6 密码文章（D-Mail 解锁）"
+  CANARY="SG-SEALED-CANARY-7F3A"
+  FIXTURE="$THEME_ROOT/verify/fixtures/sealed-post.html"
+  if [ -f "$FIXTURE" ]; then
+    ok "密文夹具存在（口令与内容见 theme/README.md 的 D-Mail 章节）"
+  else
+    bad "缺少密文夹具 $FIXTURE"
+  fi
+
+  # 夹具是一次性加密产物，盐与 IV 已固定；这里只把它当正文灌进 Halo
+  esc="$(sed 's/\\/\\\\/g; s/"/\\"/g' "$FIXTURE" 2>/dev/null | tr -d '\n' || true)"
+  code="$(api_get "/apis/content.halo.run/v1alpha1/posts/sg-post-sealed")"
+  if [ "$code" != "200" ]; then
+    cat > "$TMP/sealed.json" <<JSON
+{"post":{"apiVersion":"content.halo.run/v1alpha1","kind":"Post","metadata":{"name":"sg-post-sealed","labels":{},"annotations":{}},"spec":{"title":"已加密的 D-Mail","slug":"sealed-1","template":"post","cover":"","deleted":false,"publish":true,"publishTime":"2026-03-01T08:00:00Z","pinned":false,"allowComment":true,"visible":"PUBLIC","priority":0,"excerpt":{"autoGenerate":false,"raw":"这封 D-Mail 需要口令才能阅读。"},"categories":[],"tags":[],"htmlMetas":[]}},"content":{"raw":"$esc","content":"$esc","rawType":"markdown"},"contentPatch":""}
+JSON
+    code="$(api_post "/apis/api.console.halo.run/v1alpha1/posts" "$TMP/sealed.json")"
+    case "$code" in
+      200|201) ok "创建密文文章（slug=sealed-1，HTTP $code）" ;;
+      *) bad "创建密文文章失败（HTTP $code）"; head -c 300 "$TMP/api.json" | sed 's/^/      /'; echo ;;
+    esac
+  else
+    note "密文文章已存在，跳过创建"
+  fi
+
+  # 新发布文章的 permalink 生成有一小段延迟（全新实例上尤其明显），先等页面
+  # 真的带上锁定标记再断言，否则会撞上 404 窗口。
+  i=0
+  until [ "$i" -ge 20 ]; do
+    if curl -s -H 'Accept: text/html' -o "$BODY" "$BASE_URL/archives/sealed-1" \
+       && grep -qF 'data-dmail-sealed' "$BODY"; then
+      break
+    fi
+    i=$((i + 1)); sleep 2
+  done
+  # 反向断言：明文 canary 绝不能出现在响应体里（这是整块的核心保证）
+  detail 200 "/archives/sealed-1" "密文文章锁定页不含明文" "!$CANARY"
+fi
 step "6/6 清理"
 
 if [ "$KEEP" -eq 1 ]; then
