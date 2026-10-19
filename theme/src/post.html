@@ -26,7 +26,19 @@
         ></span>
       </div>
       <div class="sg-terminal__body">
-        <div class="sg-article-content" th:utext="${post.content.content}"></div>
+        <!--
+          D-Mail 密码文章（FR-2）：正文含 data-dmail-sealed 标记时，服务端只输出
+          密文载荷与解锁表单，明文根本不出现在响应体里；否则照常渲染全文。
+        -->
+        <th:block th:if="${#strings.contains(post.content.content, 'data-dmail-sealed')}">
+          <include src="dmail-lock.html" />
+          <th:block th:utext="${post.content.content}" />
+        </th:block>
+        <div
+          class="sg-article-content"
+          th:unless="${#strings.contains(post.content.content, 'data-dmail-sealed')}"
+          th:utext="${post.content.content}"
+        ></div>
       </div>
     </section>
 

@@ -1,0 +1,32 @@
+{
+  "mode": "inline",
+  "source": "approved-plan",
+  "rationale": "用户批准 add-sealed-posts 的 proposal.md 与 tasks.md（M3b：正文密文 + 浏览器 WebCrypto 解密，PBKDF2-SHA256 20 万次 + AES-256-GCM，会话记忆存 sessionStorage）",
+  "waves": [
+    {
+      "id": "implementation",
+      "strategy": "serial",
+      "tasks": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "2.5",
+        "3.1",
+        "3.2",
+        "3.3"
+      ],
+      "depends_on": []
+    }
+  ],
+  "artifacts_hash": "sha256:c9e490177753d369f2a736d0292f1265c8c75ac243446956ba600a456fa13427",
+  "contract_hash": null,
+  "workflow": "full",
+  "revision": 1,
+  "schema_version": 2,
+  "review_policy": "final",
+  "hash": "sha256:c63c1b9160511c32a713f38ce1a5311f5026e3773b5d2d393dbd72750a543442"
+}

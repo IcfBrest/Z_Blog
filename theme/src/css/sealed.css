@@ -1,0 +1,121 @@
+/* D-Mail 解锁面板：终端风格，只用语义变量，避免与全站配色打架 */
+
+.sg-dmail {
+  margin: 0 0 var(--gap);
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.sg-dmail__kicker {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nixie);
+}
+
+.sg-dmail__title {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
+.sg-dmail__hint {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+.sg-dmail__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sg-dmail__label {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+
+.sg-dmail__input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+.sg-dmail__input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.sg-dmail__submit {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+}
+
+.sg-dmail__submit:hover,
+.sg-dmail__submit:focus-visible {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.sg-dmail__submit:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.sg-dmail__error {
+  margin: 0.85rem 0 0;
+  font-family: var(--font-mono, var(--font-display));
+  font-size: 0.85rem;
+  color: var(--nixie-deep);
+}
+
+.sg-dmail__error::before {
+  content: "▸ ";
+  color: var(--nixie);
+}
+
+/* 密文载荷本身不出现在视觉层 */
+[data-dmail-sealed] {
+  display: none;
+}
+
+.sg-dmail__content[hidden] {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .sg-dmail {
+    padding: 1rem 0.9rem;
+  }
+
+  .sg-dmail__form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sg-dmail__submit {
+    width: 100%;
+  }
+}

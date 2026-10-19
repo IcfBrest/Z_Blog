@@ -1,0 +1,27 @@
+<section class="sg-dmail">
+  <p class="sg-dmail__kicker">D-Mail</p>
+  <h2 class="sg-dmail__title">接收加密的 D-Mail</h2>
+  <p class="sg-dmail__hint">这封邮件在发送端就加密了，输入口令才能解析正文。</p>
+
+  <form class="sg-dmail__form" data-sg-dmail-form>
+    <label class="sg-dmail__label" for="sg-dmail-pass">口令</label>
+    <input
+      class="sg-dmail__input"
+      id="sg-dmail-pass"
+      name="dmail-pass"
+      type="password"
+      autocomplete="off"
+      spellcheck="false"
+      required
+    />
+    <button class="sg-dmail__submit" type="submit">解析</button>
+  </form>
+
+  <p class="sg-dmail__error" data-sg-dmail-error hidden>口令不正确，这封 D-Mail 无法解析。</p>
+
+  <noscript>
+    <p class="sg-dmail__hint">这封 D-Mail 需要启用 JavaScript 才能解析。</p>
+  </noscript>
+</section>
+
+<div class="sg-dmail__content sg-article-content" data-sg-dmail-content hidden></div>
